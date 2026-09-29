@@ -1,0 +1,23 @@
+# data
+data/raw/
+data/photos/
+!data/README.md
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# models & weights
+models/
+*.gguf
+*.safetensors
+
+# node
+node_modules/
+
+# secrets
+.env
+*.key
+credentials.json
