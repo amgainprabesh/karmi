@@ -1004,6 +1004,35 @@ def diff_scene(
             return not horiz
         return None
 
+    def _position_hint_rank(obj: Any, oe: ObservedElement) -> int:
+        """Rank two same-wall openings by along-the-wall position words.
+
+        'left of centre' vs 'right' disambiguates two windows that share a wall and
+        similar widths (the sample plan has exactly this pair on its front wall).
+        Returns 0 (preferred) / 1 (dispreferred) / 0 when no positional word applies.
+        """
+        sid = getattr(obj, "wall_id", None)
+        if not sid or sid not in wall_by_id:
+            return 0
+        hint = (oe.location_hint or "").lower()
+        if not hint:
+            return 0
+        w = wall_by_id[sid]
+        span = abs(w.end[0] - w.start[0]) or abs(w.end[1] - w.start[1]) or 1e-9
+        if abs(w.end[0] - w.start[0]) >= abs(w.end[1] - w.start[1]):
+            cx = (obj.center[0] - min(w.start[0], w.end[0])) / span  # 0..1 along
+        else:
+            cx = (obj.center[1] - min(w.start[1], w.end[1])) / span
+        if "left" in hint:
+            return 0 if cx < 0.5 else 1
+        if "right" in hint:
+            return 0 if cx >= 0.5 else 1
+        if "centre" in hint or "center" in hint or "middle" in hint:
+            return 0 if 0.3 <= cx <= 0.7 else 1
+        if "corner" in hint:
+            return 0 if cx <= 0.2 or cx >= 0.8 else 1
+        return 0
+
     candidates: list[tuple[float, int, int]] = []  # (rel, scene_index, observed_index)
     for si, (t, obj) in enumerate(scene_items):
         if f"{t}:{obj.id}" in used_scene:
@@ -1018,6 +1047,26 @@ def diff_scene(
                 continue
             candidates.append((rel, si, idx))
     candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+
+    # Positional disambiguation: when an opening's location hint carries a position
+    # word ('left of centre', 'right', 'corner'), the same-wall candidate that matches
+    # the position wins over one that merely fits the width better — a homeowner who
+    # writes "left of centre" has told us WHICH window they measured, and pairing it
+    # with the wrong sibling would under-report the difference.
+    hint_pos = [
+        (c[0], c[1], c[2], _position_hint_rank(scene_items[c[1]][1], obs_items[c[2]]))
+        for c in candidates
+        if scene_items[c[1]][0] == "opening"
+    ]
+    if any(h[3] for h in hint_pos):  # at least one positional preference in play
+        candidates = [
+            c
+            for c in candidates
+            if scene_items[c[1]][0] != "opening"
+        ] + [
+            (h[0], h[1], h[2])
+            for h in sorted(hint_pos, key=lambda h: (h[3], h[0]))
+        ]
 
     for _rel, si, idx in candidates:
         t, obj = scene_items[si]
