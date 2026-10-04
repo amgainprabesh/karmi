@@ -146,6 +146,22 @@ footer{margin-top:36px;border-top:1px solid var(--line);padding-top:16px}
 .grid ul{list-style:none;margin:0;padding:0;font-size:13px;color:#3d4451}
 .grid li{margin-bottom:3px}
 .fine{color:var(--muted);font-size:12px;margin-top:16px}
+@media print{
+  @page{size:A4;margin:16mm 14mm}
+  body{background:#fff;font-size:11.5px}
+  .wrap{max-width:none;padding:0}
+  .tablewrap{overflow:visible;border-radius:0}
+  table{min-width:0;font-size:10.5px}
+  tr{page-break-inside:avoid}
+  h2{page-break-after:avoid}
+  .verify li,.limits,.grid>div,.runmeta{page-break-inside:avoid}
+  .limits{background:#fff8e6 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.sev-high td,tr.sev-medium td,tr.sev-low td,tr.sev-info td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+  .noprint{display:none}
+  footer{margin-top:18px}
+}
 """
 
 
