@@ -17,6 +17,7 @@ raises.
 from __future__ import annotations
 
 import html
+import re
 from typing import Any
 
 from core import nepali
@@ -43,10 +44,32 @@ def _esc(value: Any) -> str:
 
 
 def _md(value: Any) -> str:
+    """Escape a value for safe inclusion in Markdown output.
+
+    Model- and drawing-derived text is UNTRUSTED input (a drawing's title block can
+    carry prompt-injection text or, worse, HTML/JS that a Markdown viewer would
+    render — see docs/SECURITY.md). Escapes the HTML-significant characters and
+    neutralises markdown link/image syntax and heading rules, in addition to the
+    table/pipe handling.
+    """
     if value is None:
         return "—"
-    text = str(value).replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+    text = str(value)
+    text = (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+    text = text.replace("|", "\\|").replace("\r", " ").replace("\n", " ")
     text = text.strip()
+    # kill markdown link/image payloads that survive HTML escaping
+    text = re.sub(r"\[([^\]]*)\]\(([^)]*)\)", r"\1 (\2)", text)
+    text = re.sub(r"!\[([^\]]*)\]\(([^)]*)\)", r"\1 (\2)", text)
+    # a line starting here is inside a table cell, so leading #/>/- can't form
+    # block syntax — but strip control chars defensively anyway
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
     return text if text else "—"
 
 

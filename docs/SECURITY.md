@@ -250,7 +250,11 @@ in the modules named:
 6. **The report renderer must escape.** `Delta.reason`, `VerifyItem.item`,
    `narration_np/en` are model-generated from drawing content; escape (or
    `sanitize_model_text()`) before injecting into HTML, and keep `report.html`
-   self-contained (no CDN/remote assets).
+   self-contained (no CDN/remote assets). **Status: fixed.** `render_html` escapes
+   via `_esc()`; `render_markdown` escapes via `_md()` (HTML entities, markdown
+   link/image payload neutralisation, control-char strip) — verified by injecting
+   `<script>alert(1)</script>` and `[click](http://evil)` into a delta reason and
+   confirming neither survives into `report.md` or `report.html`.
 7. **`core/retrieval.py` (planned embeddings)** would embed drawing notes — and
    therefore PII — into a vector store. Redact with `find_pii_candidates()` +
    `redact()` before embedding, or embed geometry only.
