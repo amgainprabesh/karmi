@@ -60,11 +60,11 @@
 
 ## B5 — Money shot: the 2D→3D transition (1:24–2:02)
 
-**On screen:** The viewer. Start flat on the 2D plan. Press play: walls rise, the approved house assembles in 3D (green). Hold for a beat. Then the as-built model appears overlaid (red/amber); the camera orbits; three differences highlight in sequence with labels — front window (approved 1.5 m → observed about 1.0 m), stair width (1.00 m → 0.85 m), plus one more taken from the actual run at record time. Brief inset: the raw delta JSON (`expected: "1.5 m", observed: "1.0 m", severity: "medium", confidence: 0.72`).
+**On screen:** The viewer. Start flat on the 2D plan. Press play: walls rise, the approved house assembles in 3D (green). Hold for a beat. Then the as-built model appears overlaid; the camera orbits; differences highlight in sequence with labels — the one real finding from the demo run: **front window, approved 1.5 m, measured 1.0 m (HIGH, 33.3%)**. Brief inset: the raw delta JSON (`expected: "1.50 m", observed: "1.00 m", severity: "high", confidence: 0.75`).
 
-**Voiceover:** "And this is the part we built Karmi for. The approved house builds itself from the drawing." *(pause for the transition)* "Then the as-built model lands on top. Where they disagree — this front window, approved at one-point-five metres, observed at about one metre; this stair; this setback — the difference is highlighted, element by element, with severity and confidence."
+**Voiceover:** "And this is the part we built Karmi for. The approved house builds itself from the drawing." *(pause for the transition)* "Then the site evidence lands on top. Where they disagree — this front window, approved at one-point-five metres, measured on site at one metre — the difference is highlighted, element by element, with severity and confidence."
 
-**Notes:** One continuous take; rehearse the camera moves. Highlighted-element count must equal `differs + missing + unexpected` in `report.json`. Say "about one metre" — it is an estimate, never a millimetre claim.
+**Notes:** One continuous take; rehearse the camera moves. **The demo run has exactly ONE differing element (the window)** — the story is one clear finding plus honest coverage ("the photos covered 2 of 21 drawn elements; the rest are marked not-checked, not missing"). That honesty beat is stronger than padding the demo with staged differences. Say "measured" / "site evidence", not "observed about" — the sidecar is a tape measurement.
 
 ## B6 — Honest limits + the Nepali beat (2:02–2:26)
 
