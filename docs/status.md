@@ -1,6 +1,6 @@
 # Karmi — Status Board
 
-> **Live board.** Snapshot: 2026-10-04 17:35 NST · **Owner:** PM · **Integration snapshot by:** orchestrator · Companion documents: [`PLAN.md`](PLAN.md) (scope contract), [`CHANGELOG.md`](../CHANGELOG.md) (what landed).
+> **Live board.** Snapshot: 2026-10-04 18:50 NST (round 2 complete) · **Owner:** PM · **Integration snapshots by:** orchestrator · Companion documents: [`PLAN.md`](PLAN.md) (scope contract), [`CHANGELOG.md`](../CHANGELOG.md) (what landed).
 >
 > **Verification rule:** `verified` requires a named check that was actually run — recorded in the "Verified by" column (who + what command/observation + date). Anything less is `written-unverified`.
 >
@@ -34,13 +34,13 @@
 | Nepali narration | BACKEND-DIFF | `core/nepali.py` | Nepali strings for deltas and verify items | verified | orchestrator — rendered in headless Edge; Devanagari confirmed correct (2026-10-04) |
 | Web UI | FRONTEND-WEB | `web/app.py`, `web/templates/` (base, index, run, error), `web/static/` | HTTP upload → `run_pipeline` → report + viewer pages | verified | orchestrator — `/healthz` 200; real upload → 79 KB run page containing the verify list; malicious PDF → friendly bilingual 400. **Fixed**: `.json` measurement sidecars were silently dropped; `/viewer/ID/vendor/three.module.js` 404'd (2026-10-04) |
 | Renderer | RENDER-3D | `render/adapter.py`, `render/viewer.html`, `render/vendor/three.module.js` | `build_view(scene, observed, report) -> dict`; viewer consumes `view.json` | verified | orchestrator — headless Edge + WebGL: 3D model renders with rooms labelled NP+EN; Diff mode highlights the differing element in red; **0 console errors, 0 HTTP ≥ 400** (2026-10-04) |
-| Tests | TESTING | `tests/` | pytest: schema round-trip, fixture parse, diff determinism, degraded paths | verified | orchestrator — `python -m pytest -q` → **53 passed** (2026-10-04); round 2 adds coverage-guard, matching, AI-over-HTTP and privacy tests |
+| Tests | TESTING | `tests/` | pytest: schema, fixtures, diff, degraded paths | verified | orchestrator — `python -m pytest -q` → **77 passed** incl. the new coverage-guard, matching, AI-over-HTTP (real loopback server) and privacy suites (2026-10-04) |
 | Security + privacy | SECURITY | `core/validate.py`, `docs/SECURITY.md`, `docs/PRIVACY.md` | Upload validation; local-first privacy stance | verified | orchestrator — JS-bearing PDF rejected by both the CLI and the web upload; traversal paths 404; `run.json` path leak fixed (2026-10-04) |
-| Research | RESEARCH | `docs/research/` | Citable regulatory references (NBC, Building Act 2055, bylaws) | written-unverified | owner cited primary sources with URLs; anything unconfirmed is explicitly flagged in the documents |
-| UI design spec | DESIGN | `docs/design/ui-spec.md`, `docs/design/language-guide.md`, `docs/design/wireframes.html` | UI layout and flow spec, data-to-UI mapping, allowed language | written-unverified | owner: 123 schema-field references checked against `core/schema.py`, 0 problems; wireframes rendered in headless Chrome |
-| Dataset tooling | R2-DATASET | `dataset/` | Annotation record, consent, de-identification, export, splits | in progress | second build round |
-| Raster / scan path | R2-RASTER | `core/raster.py`, `docs/RASTER.md` | Deterministic raster → line segments with honest confidence | in progress | second build round |
-| Scripts / quality gate | R2-SCRIPTS | `scripts/` | One-command demo, check-all gate, web smoke test | in progress | second build round |
+| Research | RESEARCH | `docs/research/` | Citable references (NBC 206, Building Rules 2066, Privacy Act 2075, Copyright Act 2059) | written-unverified | owner cited primary sources with URLs; anything unconfirmed is explicitly flagged in the documents |
+| UI design spec | DESIGN | `docs/design/ui-spec.md`, `docs/design/language-guide.md`, `docs/design/wireframes.html` | UI layout, data-to-UI mapping, allowed language | written-unverified | owner: 123 schema-field references checked against `core/schema.py`, 0 problems; wireframes rendered in headless Chrome |
+| Dataset tooling | R2-DATASET | `dataset/` | Annotation record, consent, de-identification, export, splits | verified | orchestrator — `python -m dataset.export --example` → 3 records, withdrawn-consent record excluded, HF folder + split manifest, leakage check CLEAN; `python -m dataset.deidentify` → EXIF stripped with pixel hashes identical before/after; record without consent → `ValidationError` (2026-10-04) |
+| Raster / scan path | R2-RASTER | `core/raster.py`, `docs/RASTER.md` | Deterministic raster → line segments with honest confidence | verified | orchestrator — raster bot's work (provider died before it could report) verified and **wired into `core/model.py`**: scan-only PDF → 8 walls / 4 openings, provenance `raster_geometry` capped at 0.70, no invented scale; 200 dpi render → 47 segments; deskew recovered −4.00° on a rotated copy; blank image → 0 segments + warning (2026-10-04) |
+| Scripts / quality gate | R2-SCRIPTS | `scripts/` | One-command demo, check-all gate, web smoke test | verified | orchestrator — `scripts/demo.py` (full run + DEMO.md + bilingual headline), `scripts/check_all.py` → **GATE: PASS 7/7** (pytest, 3 pipeline runs, 21 imports, route table, privacy scan), `scripts/smoke_web.py` → PASS 7/7 steps against a real server (2026-10-04) |
 | 2D→3D prototype (pre-existing) | Orchestrator | `proto/plan-to-3d.html` | Hand-authored 2D→3D animation demo; no AI; superseded by `render/` | written-unverified | not wired to the pipeline; kept as the design ancestor |
 | Judge-facing docs | Orchestrator | `README.md`, `docs/architecture.md`, `AI_USAGE.md` | Problem statement, architecture, AI disclosure, run instructions | verified | orchestrator — updated to match reality after integration (2026-10-04) |
 | Project docs (this package) | PM | `docs/PLAN.md`, `docs/DEMO_SCRIPT.md`, `docs/status.md`, `CHANGELOG.md` | Scope contract, video script, live board, changelog | written-unverified | PM — markdown structure check only; this board re-snapshotted by the orchestrator |
@@ -51,9 +51,9 @@ None.
 
 ## Known honest gaps
 
-1. **No live open-weight model has been run.** The provider layer and both extraction paths are written and mock-tested; the demo uses hand-measured sidecars. This is stated plainly in `AI_USAGE.md` rather than glossed over.
-2. **Raster/scan drawings are not extracted yet** — they return a warning and an empty model. `core/raster.py` is in flight.
-3. **No real dataset exists yet.** `docs/research/dataset-plan.md` is the plan, the tooling is in flight, and no real records will be collected without explicit consent.
+1. **No live open-weight model has been run.** The provider layer and both extraction paths are written and tested, including a real loopback HTTP round-trip (`tests/test_ai_http.py`); the demo uses hand-measured sidecars. This is stated plainly in `AI_USAGE.md` rather than glossed over.
+2. **Raster extraction works but is approximate** — scan-only PDFs now yield walls/openings with raster provenance and no invented scale; fine-tuning on real naksa drawings remains future work.
+3. **No real dataset exists yet.** The tooling works end to end on synthetic examples; no real records will be collected without explicit consent.
 4. **Regulatory numbers are research, not code.** `docs/research/nbc-rules.md` feeds future threshold tuning and is explicitly marked unverified wherever a municipal bylaw check is still needed.
 5. **Nothing is pushed to a remote.** All work is local commits only.
 
