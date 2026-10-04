@@ -1,0 +1,782 @@
+{
+  "schema_version": "0.1.0",
+  "record_id": "karmi-example-0002",
+  "synthetic": true,
+  "source_kind": "vector_pdf",
+  "jurisdiction": {
+    "municipality": "Lalitpur Metropolitan City",
+    "district": "Lalitpur",
+    "ward": null
+  },
+  "consent": {
+    "grants": [
+      {
+        "roles": [
+          "homeowner",
+          "photographer"
+        ],
+        "method": "written_form",
+        "granted_at": "2026-06-01",
+        "scope": {
+          "licence_scope": [
+            "cc-by-nc-4.0"
+          ],
+          "dataset_release": true,
+          "model_training": true,
+          "restrictions": [
+            "non-commercial use only"
+          ]
+        },
+        "signatory_id": "form-ex-0002-hp",
+        "evidence": "synthetic example — no real form exists",
+        "guardian": false
+      },
+      {
+        "roles": [
+          "drawing_author"
+        ],
+        "method": "written_form",
+        "granted_at": "2026-06-01",
+        "scope": {
+          "licence_scope": [
+            "cc-by-nc-4.0"
+          ],
+          "dataset_release": true,
+          "model_training": true,
+          "restrictions": [
+            "non-commercial use only"
+          ]
+        },
+        "signatory_id": "form-ex-0002-d",
+        "evidence": "synthetic example — no real form exists",
+        "guardian": false
+      }
+    ],
+    "withdrawn": false,
+    "withdrawn_at": null,
+    "withdrawal_reason": null,
+    "withdrawal_requested_by": null
+  },
+  "licence": {
+    "id": "cc-by-nc-4.0",
+    "terms_note": null,
+    "attribution": "Karmi fixtures (synthetic)"
+  },
+  "release_tier": "public",
+  "drawing": {
+    "scene": {
+      "schema_version": "0.1.0",
+      "source_kind": "vector_pdf",
+      "source_file": "fixtures/naksa_drift.pdf",
+      "units": "m",
+      "walls": [
+        {
+          "id": "W1",
+          "start": [
+            2.5,
+            2.5
+          ],
+          "end": [
+            12.5,
+            2.5
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W2",
+          "start": [
+            2.5,
+            2.5
+          ],
+          "end": [
+            2.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W3",
+          "start": [
+            8.5,
+            2.5
+          ],
+          "end": [
+            8.5,
+            10.0
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W4",
+          "start": [
+            12.5,
+            2.5
+          ],
+          "end": [
+            12.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W5",
+          "start": [
+            2.5,
+            6.5
+          ],
+          "end": [
+            12.5,
+            6.5
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W6",
+          "start": [
+            8.5,
+            8.1
+          ],
+          "end": [
+            12.5,
+            8.1
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "W7",
+          "start": [
+            2.5,
+            10.0
+          ],
+          "end": [
+            12.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        }
+      ],
+      "openings": [
+        {
+          "id": "O1",
+          "kind": "window",
+          "wall_id": "W1",
+          "center": [
+            5.5,
+            2.5
+          ],
+          "width": 1.2,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O2",
+          "kind": "window",
+          "wall_id": "W1",
+          "center": [
+            9.0,
+            2.5
+          ],
+          "width": 1.2,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O3",
+          "kind": "door",
+          "wall_id": "W3",
+          "center": [
+            8.5,
+            6.5
+          ],
+          "width": 0.8,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O4",
+          "kind": "door",
+          "wall_id": "W4",
+          "center": [
+            12.5,
+            5.5
+          ],
+          "width": 0.9,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O5",
+          "kind": "door",
+          "wall_id": "W5",
+          "center": [
+            5.5,
+            6.5
+          ],
+          "width": 0.8,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O6",
+          "kind": "door",
+          "wall_id": "W5",
+          "center": [
+            10.1,
+            6.5
+          ],
+          "width": 0.75,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O7",
+          "kind": "door",
+          "wall_id": "W6",
+          "center": [
+            10.1,
+            8.1
+          ],
+          "width": 0.7,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O8",
+          "kind": "window",
+          "wall_id": "W7",
+          "center": [
+            4.5,
+            10.0
+          ],
+          "width": 1.0,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "O9",
+          "kind": "door",
+          "wall_id": "W7",
+          "center": [
+            9.5,
+            10.0
+          ],
+          "width": 0.9,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "R1",
+          "name": "BEDROOM 1",
+          "name_np": "शयनकक्ष",
+          "polygon": [
+            [
+              2.5,
+              2.5
+            ],
+            [
+              8.5,
+              2.5
+            ],
+            [
+              8.5,
+              6.5
+            ],
+            [
+              2.5,
+              6.5
+            ]
+          ],
+          "area_m2": 24.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "R2",
+          "name": "LIVING",
+          "name_np": "बैठक",
+          "polygon": [
+            [
+              8.5,
+              2.5
+            ],
+            [
+              12.5,
+              2.5
+            ],
+            [
+              12.5,
+              6.5
+            ],
+            [
+              8.5,
+              6.5
+            ]
+          ],
+          "area_m2": 16.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "R3",
+          "name": "KITCHEN",
+          "name_np": "भान्सा",
+          "polygon": [
+            [
+              8.5,
+              6.5
+            ],
+            [
+              12.5,
+              6.5
+            ],
+            [
+              12.5,
+              8.1
+            ],
+            [
+              8.5,
+              8.1
+            ]
+          ],
+          "area_m2": 6.4,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "R4",
+          "name": "BEDROOM 2",
+          "name_np": "शयनकक्ष",
+          "polygon": [
+            [
+              2.5,
+              6.5
+            ],
+            [
+              8.5,
+              6.5
+            ],
+            [
+              8.5,
+              8.1
+            ],
+            [
+              8.5,
+              10.0
+            ],
+            [
+              2.5,
+              10.0
+            ]
+          ],
+          "area_m2": 21.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "R5",
+          "name": "BATH",
+          "name_np": "शौचालय",
+          "polygon": [
+            [
+              8.5,
+              8.1
+            ],
+            [
+              12.5,
+              8.1
+            ],
+            [
+              12.5,
+              10.0
+            ],
+            [
+              8.5,
+              10.0
+            ]
+          ],
+          "area_m2": 7.6,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        }
+      ],
+      "dimensions": [
+        {
+          "id": "D1",
+          "value": 10.0,
+          "unit": "m",
+          "label": "10.0 m",
+          "start": [
+            2.5,
+            10.65
+          ],
+          "end": [
+            12.5,
+            10.65
+          ],
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.9,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        },
+        {
+          "id": "D2",
+          "value": 7.5,
+          "unit": "m",
+          "label": "7.5 m",
+          "start": [
+            1.85,
+            2.5
+          ],
+          "end": [
+            1.85,
+            10.0
+          ],
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.9,
+            "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+          }
+        }
+      ],
+      "north_deg": 0.0,
+      "north_provenance": {
+        "source": "human_annotation",
+        "confidence": 0.9,
+        "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+      },
+      "scale_m_per_unit": 0.025,
+      "scale_provenance": {
+        "source": "human_annotation",
+        "confidence": 0.9,
+        "evidence": "human-annotated ground truth (synthetic example): live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+      },
+      "bbox": [
+        2.5,
+        2.5,
+        12.5,
+        10.0
+      ],
+      "warnings": [],
+      "meta": {
+        "page_index": 0,
+        "page_size_pt": [
+          842.0,
+          595.0
+        ],
+        "n_segments_raw": 61,
+        "n_texts": 11,
+        "image_count": 0,
+        "ai_used": false,
+        "north_frame": "degrees clockwise from 'up' on the page (0 = up)",
+        "scale_candidates": [
+          {
+            "value_m": 10.0,
+            "extent_pt": 400.0,
+            "implied_m_per_pt": 0.025
+          },
+          {
+            "value_m": 7.5,
+            "extent_pt": 300.0,
+            "implied_m_per_pt": 0.025
+          }
+        ],
+        "coordinate_frame": "pdf page points scaled to metres (y down)",
+        "snap_stats": {
+          "n_total": 61.0,
+          "n_horizontal": 25.0,
+          "n_vertical": 12.0,
+          "n_unsnapped": 24.0,
+          "n_dropped": 0.0,
+          "max_residual_deg": 0.0,
+          "mean_residual_deg": 0.0
+        },
+        "extraction": {
+          "n_runs": 59,
+          "n_walls_paired": 7,
+          "n_walls_single_line": 0,
+          "n_faces": 5,
+          "n_outer_cycles": 1
+        },
+        "unmatched_room_labels": [],
+        "ingest": {
+          "n_pages": 1,
+          "curves_skipped": 0,
+          "pdf_title": "Karmi sample naksa (drift)",
+          "file_name": "naksa_drift.pdf"
+        },
+        "dataset_note": "live extraction of fixtures/naksa_drift.pdf, verified by a human annotator"
+      }
+    },
+    "page_files": [
+      "drawing/page-01.png"
+    ],
+    "original_sha256": "e66ceed00ffaede87d2af064d6cbd7777b77408642e9e402da24fc3883ad0971",
+    "provenance": {
+      "source": "human_annotation",
+      "confidence": 1.0,
+      "evidence": "human-annotated ground truth (synthetic example)"
+    },
+    "notes": "synthetic example — the drift variant has a narrower front window than 0001"
+  },
+  "photos": [
+    {
+      "file": "photos/p01-interior.jpg",
+      "observed": {
+        "schema_version": "0.1.0",
+        "stage": "unknown",
+        "stage_provenance": {
+          "source": "default",
+          "confidence": 0.0,
+          "evidence": "latest capture: interior_unknown.jpg"
+        },
+        "captures": [
+          {
+            "file": "photos/p01-interior.jpg",
+            "taken_at": "2026-06-01T12:00:00+05:45",
+            "stage": "unknown",
+            "stage_confidence": 0.0,
+            "view": "interior",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.0,
+              "evidence": "human-annotated ground truth (synthetic example): view/stage labels checked against the fixture sidecar"
+            }
+          }
+        ],
+        "elements": [],
+        "scale_refs": [],
+        "warnings": [
+          "interior_unknown.jpg: construction stage unknown — no stage hint and no stage token in the filename. Add --stage-hint or rename the photo (e.g. 'front_walls.jpg').",
+          "No scale reference available — absolute sizes cannot be estimated from these photos; element confidences were capped at 0.30 and every size must be treated as unmeasured."
+        ],
+        "meta": {
+          "photo_count": 1,
+          "sidecars_used": [],
+          "photos_missing": []
+        }
+      },
+      "original_sha256": "6f0b445165bb1a1bb9c73f0fad3ab6bf0278cc29071e3cf2dc8c45a71a43fc40",
+      "redacted": true,
+      "provenance": {
+        "source": "human_annotation",
+        "confidence": 1.0,
+        "evidence": "human-annotated ground truth (synthetic example)"
+      },
+      "notes": "synthetic example — derived from the repository fixture fixtures/photos/interior_unknown.jpg; EXIF-stripped copy + report in dataset/example/media/"
+    },
+    {
+      "file": "photos/p02-front.jpg",
+      "observed": {
+        "schema_version": "0.1.0",
+        "stage": "walls",
+        "stage_provenance": {
+          "source": "user_supplied",
+          "confidence": 0.9,
+          "evidence": "latest capture: front_walls_stage.jpg"
+        },
+        "captures": [
+          {
+            "file": "photos/p02-front.jpg",
+            "taken_at": "2026-06-08T10:30:00+05:45",
+            "stage": "walls",
+            "stage_confidence": 0.9,
+            "view": "front",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.9,
+              "evidence": "human-annotated ground truth (synthetic example): view/stage labels checked against the fixture sidecar"
+            }
+          }
+        ],
+        "elements": [
+          {
+            "id": "obs-001",
+            "kind": "wall",
+            "approx_size": {
+              "length": 9.8,
+              "height": 2.7,
+              "thickness": 0.23
+            },
+            "location_hint": "front (south) facade, full width",
+            "matches_scene_id": "W7",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.85,
+              "evidence": "human-annotated ground truth (synthetic example): tape measure: 9.80 m long, 2.70 m high, 9 in thick"
+            }
+          },
+          {
+            "id": "obs-002",
+            "kind": "opening",
+            "approx_size": {
+              "width": 1.0,
+              "height": 1.2
+            },
+            "location_hint": "front facade, left of centre",
+            "matches_scene_id": "O8",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.8,
+              "evidence": "human-annotated ground truth (synthetic example): window opening measured 1.00 m wide x 1.20 m high (sill about 0.90 m) — narrower than the drawing"
+            }
+          }
+        ],
+        "scale_refs": [
+          {
+            "kind": "door_height",
+            "value": 2.05,
+            "unit": "m",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.9,
+              "evidence": "human-annotated ground truth (synthetic example): main door frame height, tape-measured"
+            }
+          }
+        ],
+        "warnings": [],
+        "meta": {
+          "photo_count": 1,
+          "sidecars_used": [
+            "front_walls_stage.jpg.json"
+          ],
+          "photos_missing": [],
+          "notes": [
+            {
+              "photo": "front_walls_stage.jpg",
+              "notes": "DEMO MEASUREMENT SET — synthetic, not a real site. Demonstrates the sidecar format: the homeowner (or their engineer) measures a few things with a tape and writes them here, so Karmi has real numbers even when no AI model is configured. 'matches_scene_id' names the element in the approved drawing that was measured; it is optional, and when present it overrides geometric guessing."
+            }
+          ]
+        }
+      },
+      "original_sha256": "6c47f43ed88321e7c48f7415dcab5c7ca0e40d1940123630920f1f0d1b7dad6e",
+      "redacted": true,
+      "provenance": {
+        "source": "human_annotation",
+        "confidence": 1.0,
+        "evidence": "human-annotated ground truth (synthetic example)"
+      },
+      "notes": "synthetic example — derived from the repository fixture fixtures/photos/front_walls_stage.jpg; EXIF-stripped copy + report in dataset/example/media/"
+    }
+  ],
+  "annotator": {
+    "annotator_id": "ann-001",
+    "role": "core_team",
+    "tool": "dataset/annotate.html"
+  },
+  "quality": {
+    "reviewed": false,
+    "double_annotated": false,
+    "n_annotators": 1,
+    "completeness": 0.6,
+    "issues": [
+      "single-annotated example; not yet double-reviewed"
+    ]
+  },
+  "notes": "SYNTHETIC EXAMPLE (not collected data). Demonstrates a non-commercial per-record licence (CC BY-NC 4.0) and a multi-role consent grant.",
+  "created_at": "2026-10-04T12:05:00Z"
+}

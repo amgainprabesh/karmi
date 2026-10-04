@@ -1,0 +1,33 @@
+{
+  "schema": "karmi-deid-report/0.1.0",
+  "kind": "photo",
+  "source_name": "side_columns_stage.jpg",
+  "source_sha256": "5159894626110a3277172e2d532f524c80a6ca9e14b9bab92a038c70d4e24a59",
+  "generated_at": "2026-10-04T12:15:53+00:00",
+  "findings": [],
+  "metadata": {
+    "exif_present_before": true,
+    "gps_present_before": false,
+    "exif_present_after": false,
+    "gps_present_after": false,
+    "exif_fields_before": [
+      "DateTimeDigitized",
+      "DateTimeOriginal"
+    ],
+    "exif_fields_removed": [
+      "DateTimeDigitized",
+      "DateTimeOriginal"
+    ],
+    "gps_fields_removed": []
+  },
+  "pixel_sha256_before": "70306a46d760e48599ec66264dfdce56ccf8ccfac9809533329dedbc12102aaa",
+  "pixel_sha256_after": "70306a46d760e48599ec66264dfdce56ccf8ccfac9809533329dedbc12102aaa",
+  "pixels_unchanged": true,
+  "outputs": [
+    "side_columns_stage.clean.jpg"
+  ],
+  "notes": [
+    "Container-level metadata strip (core.validate.strip_exif): decoded pixel data is bit-for-bit identical; the two pixel hashes below prove it.",
+    "Metadata is only half of photo privacy: people and number plates must be excluded or blurred by human review before release (dataset-plan §5)."
+  ]
+}

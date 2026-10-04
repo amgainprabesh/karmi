@@ -1,0 +1,9 @@
+# generated de-identification outputs (reports + cleaned copies)
+deid_out/
+
+# generated example exports (rebuild with: python -m dataset export --example)
+example/export/
+
+# python caches
+__pycache__/
+*.pyc

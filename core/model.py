@@ -191,12 +191,9 @@ def build_scene_graph(
     if ing.kind in (SourceKind.RASTER_PDF, SourceKind.SCAN, SourceKind.IMAGE) and (
         len(ing.segments) < 4
     ):
-        sg.warnings.append(
-            "The drawing is a raster/scan (no usable vector paths): vector extraction "
-            "was skipped. Supply a CAD-exported PDF for the full model."
+        return _build_raster_model(
+            sg, ing, drawing_path, scale_m_per_unit=scale_m_per_unit, north_deg=north_deg
         )
-        sg.meta["coordinate_frame"] = "none (raster — no vector geometry extracted)"
-        return sg
 
     if not ing.texts:
         sg.warnings.append(
@@ -256,11 +253,128 @@ def load_scene_graph(path: str | Path) -> SceneGraph:
 # --------------------------------------------------------------------------- #
 # the vector pipeline
 # --------------------------------------------------------------------------- #
+def _build_raster_model(
+    sg: SceneGraph,
+    ing: "IngestedDrawing",
+    drawing_path: str | Path,
+    *,
+    scale_m_per_unit: float | None = None,
+    north_deg: float | None = None,
+) -> SceneGraph:
+    """Raster/scan fallback: deterministic line extraction on the image itself.
+
+    Replaces the old "return empty + warning" behaviour. `core/raster.py` does the
+    image analysis (Otsu binarize, projection-profile deskew, run-length segment
+    extraction); this wrapper feeds its segments to the same wall/opening logic the
+    vector path uses, with honest raster confidence and NO invented scale.
+
+    Contract when `scale_m_per_unit` is None (documented in docs/RASTER.md):
+    coordinates stay in PIXELS, so every metric field (wall thickness in metres,
+    opening width, room area, dimensions) stays None, and a warning says exactly
+    why. The scene graph remains valid for topology-only comparison and for the
+    3D viewer; metric deltas come back UNVERIFIABLE rather than being guessed.
+    """
+    sg.warnings.append(
+        "The drawing is a raster/scan (no usable vector paths): running the "
+        "deterministic raster extractor. Geometry will be approximate; supply a "
+        "CAD-exported PDF for the full model."
+    )
+    sg.meta["coordinate_frame"] = "pixels (raster — metric numbers unavailable without a scale)"
+    try:
+        from core.raster import extract_plan
+
+        plan = extract_plan(drawing_path)
+        segs = plan.get("segments", [])
+        sg.warnings.extend(plan.get("warnings", []))
+        sg.meta["raster"] = {
+            "segments": len(segs),
+            "quality": plan.get("quality"),
+            "deskew_deg": plan.get("deskew_applied_deg", 0.0),
+        }
+        mpp = plan.get("scale_m_per_unit")
+        if scale_m_per_unit is not None:
+            mpp = scale_m_per_unit
+            sg.warnings.append(
+                "Using the caller-supplied scale for this raster drawing "
+                f"({mpp} m per pixel)."
+            )
+        if mpp is not None:
+            sg.scale_m_per_unit = mpp
+            sg.scale_provenance = Provenance(
+                source="raster_geometry", confidence=0.4,
+                evidence="raster path, caller-supplied or calibrated",
+            )
+        else:
+            sg.warnings.append(
+                "No scale evidence in this raster: coordinates stay in pixels, so "
+                "metric sizes (metres, areas) are not computed. Supply the scale or "
+                "a known dimension to enable them."
+            )
+
+        if not segs:
+            sg.warnings.append(
+                "The raster extractor found no line segments — check contrast, "
+                "focus and crop of the image."
+            )
+            return sg
+
+        # Feed the same downstream builder the vector path uses, by re-ingesting the
+        # extracted segments as if they were vector paths. Scale: pixels (or the
+        # caller's m/px). `ing` here is the original ingest of the raster page, whose
+        # vector `segments` are empty — that is exactly why we are here.
+        from core.ingest import IngestedDrawing, SourceKind as _SK
+
+        px_ing = IngestedDrawing(
+            kind=_SK.IMAGE if ing.kind == SourceKind.IMAGE else ing.kind,
+            page_index=ing.page_index,
+            page_size_pt=ing.page_size_pt,
+            segments=list(segs),  # already ((x1,y1),(x2,y2)) tuples — same convention as ingest
+            texts=ing.texts,  # rare: a scanned PDF may still carry a text layer
+            image_count=ing.image_count,
+            warnings=[],
+        )
+        # The vector builder expects to set provenance itself; raster segments get
+        # raster_geometry provenance via the hook below.
+        sg.meta["raster_segments_used"] = len(px_ing.segments)
+        _build_vector_model(sg, px_ing, mpp, north_deg, provenance_source="raster_geometry")
+        sg.warnings.append(
+            "Raster extraction is approximate: walls come from pixel runs, opening "
+            "kinds are heuristics. Treat every number as an estimate to verify."
+        )
+    except Exception as exc:  # noqa: BLE001 — degrade, never crash the demo
+        sg.warnings.append(
+            f"Raster extraction failed ({type(exc).__name__}: {exc}); returning the "
+            "empty model. Supply a CAD-exported PDF for the full pipeline."
+        )
+        sg.meta["raster_error"] = traceback.format_exc()
+    return sg
+
+
+def save_scene_graph(sg: SceneGraph, path: str | Path) -> Path:
+    """Write a scene graph to JSON (UTF-8, pretty). Returns the path written."""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps(sg.model_dump(mode="json"), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return p
+
+
+def load_scene_graph(path: str | Path) -> SceneGraph:
+    """Load a scene graph from JSON."""
+    return SceneGraph.model_validate(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+# --------------------------------------------------------------------------- #
+# the vector pipeline
+# --------------------------------------------------------------------------- #
 def _build_vector_model(
     sg: SceneGraph,
     ing: IngestedDrawing,
     scale: float | None,
     north_deg: float | None,
+    provenance_source: str = "vector_geometry",
 ) -> None:
     s = scale if scale is not None else CAD_M_PER_PT  # working scale (metres per pt)
     sf = scale if scale is not None else 1.0  # output factor (1.0 = leave in pt)
@@ -337,18 +451,24 @@ def _build_vector_model(
         thickness = (
             round(w.thickness * sf, 4) if (w.thickness is not None and scale is not None) else None
         )
+        # Raster path: the run-length extractor's confidence is the wall confidence,
+        # but it cannot exceed the honesty ceiling for pixel evidence.
+        if provenance_source == "raster_geometry":
+            _wall_conf = min(w.confidence, 0.70)
+        else:
+            _wall_conf = w.confidence
         sg.walls.append(
-            Wall(
-                id=w.wall_id,
-                start=M(w.a),
-                end=M(w.b),
-                thickness=thickness,
-                is_external=w.external,
-                provenance=Provenance(
-                    source="vector_geometry", confidence=w.confidence, evidence=w.evidence
-                ),
-            )
-        )
+                    Wall(
+                        id=w.wall_id,
+                        start=M(w.a),
+                        end=M(w.b),
+                        thickness=thickness,
+                        is_external=w.external,
+                        provenance=Provenance(
+                            source=provenance_source, confidence=_wall_conf, evidence=w.evidence
+                        ),
+                    )
+                )
 
     for o in openings:
         sg.openings.append(
@@ -361,7 +481,7 @@ def _build_vector_model(
                 height=None,
                 sill_height=None,
                 provenance=Provenance(
-                    source="vector_geometry", confidence=o["confidence"], evidence=o["evidence"]
+                    source=provenance_source, confidence=o["confidence"], evidence=o["evidence"]
                 ),
             )
         )
@@ -375,7 +495,7 @@ def _build_vector_model(
                 polygon=[M(p) for p in r["polygon"]],
                 area_m2=round(r["area_m2"], 3) if r["area_m2"] is not None else None,
                 provenance=Provenance(
-                    source="vector_geometry", confidence=r["confidence"], evidence=r["evidence"]
+                    source=provenance_source, confidence=r["confidence"], evidence=r["evidence"]
                 ),
             )
         )
@@ -390,7 +510,7 @@ def _build_vector_model(
                 start=M(d["start"]) if d["start"] else None,
                 end=M(d["end"]) if d["end"] else None,
                 provenance=Provenance(
-                    source="vector_geometry", confidence=d["conf"], evidence=d["evidence"]
+                    source=provenance_source, confidence=d["conf"], evidence=d["evidence"]
                 ),
             )
         )

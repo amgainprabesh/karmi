@@ -1,0 +1,16 @@
+{
+  "schema": "karmi-redaction-instruction/0.1.0",
+  "record_id": "karmi-example-0003",
+  "action": "remove_from_release",
+  "scope": "all_tiers",
+  "requested_at": "2026-09-20T11:30:00Z",
+  "reason": "Synthetic demonstration: the contributor asked to remove this record from the dataset (fixture walkthrough — no real person involved).",
+  "requested_by": "homeowner",
+  "steps": [
+    "Exclude karmi-example-0003 from every future export — to_jsonl() and to_hf_dataset() skip records whose consent is withdrawn.",
+    "Delete karmi-example-0003's media from any staged release directory before the next publication (staged releases are rebuilt from records).",
+    "Record the withdrawal in the dataset card changelog and bump the dataset version for the next revision.",
+    "If the record was already published: note in the changelog that earlier downloads cannot be recalled; the removal takes effect from the next revision."
+  ],
+  "honest_limit": "Copies of dataset revisions that were already downloaded cannot be recalled; the record is removed from the next revision onward (dataset-plan §3)."
+}

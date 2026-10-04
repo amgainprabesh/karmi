@@ -1,0 +1,681 @@
+{
+  "schema_version": "0.1.0",
+  "record_id": "karmi-example-0003",
+  "synthetic": true,
+  "source_kind": "vector_pdf",
+  "jurisdiction": {
+    "municipality": "Kathmandu Metropolitan City",
+    "district": "Kathmandu",
+    "ward": null
+  },
+  "consent": {
+    "grants": [
+      {
+        "roles": [
+          "homeowner"
+        ],
+        "method": "written_form",
+        "granted_at": "2026-06-01",
+        "scope": {
+          "licence_scope": [
+            "cc-by-4.0"
+          ],
+          "dataset_release": true,
+          "model_training": true,
+          "restrictions": []
+        },
+        "signatory_id": "form-ex-0003-h",
+        "evidence": "synthetic example — no real form exists",
+        "guardian": false
+      },
+      {
+        "roles": [
+          "drawing_author"
+        ],
+        "method": "written_form",
+        "granted_at": "2026-06-01",
+        "scope": {
+          "licence_scope": [
+            "cc-by-4.0"
+          ],
+          "dataset_release": true,
+          "model_training": true,
+          "restrictions": []
+        },
+        "signatory_id": "form-ex-0003-d",
+        "evidence": "synthetic example — no real form exists",
+        "guardian": false
+      }
+    ],
+    "withdrawn": true,
+    "withdrawn_at": "2026-09-20T11:30:00Z",
+    "withdrawal_reason": "Synthetic demonstration: the contributor asked to remove this record from the dataset (fixture walkthrough — no real person involved).",
+    "withdrawal_requested_by": "homeowner"
+  },
+  "licence": {
+    "id": "cc-by-4.0",
+    "terms_note": null,
+    "attribution": "Karmi fixtures (synthetic)"
+  },
+  "release_tier": "gated",
+  "drawing": {
+    "scene": {
+      "schema_version": "0.1.0",
+      "source_kind": "vector_pdf",
+      "source_file": "fixtures/naksa_base.pdf",
+      "units": "m",
+      "walls": [
+        {
+          "id": "W1",
+          "start": [
+            2.5,
+            2.5
+          ],
+          "end": [
+            12.5,
+            2.5
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W2",
+          "start": [
+            2.5,
+            2.5
+          ],
+          "end": [
+            2.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W3",
+          "start": [
+            8.5,
+            2.5
+          ],
+          "end": [
+            8.5,
+            10.0
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W4",
+          "start": [
+            12.5,
+            2.5
+          ],
+          "end": [
+            12.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W5",
+          "start": [
+            2.5,
+            6.5
+          ],
+          "end": [
+            12.5,
+            6.5
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W6",
+          "start": [
+            8.5,
+            8.1
+          ],
+          "end": [
+            12.5,
+            8.1
+          ],
+          "thickness": 0.115,
+          "is_external": false,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "W7",
+          "start": [
+            2.5,
+            10.0
+          ],
+          "end": [
+            12.5,
+            10.0
+          ],
+          "thickness": 0.23,
+          "is_external": true,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.95,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        }
+      ],
+      "openings": [
+        {
+          "id": "O1",
+          "kind": "window",
+          "wall_id": "W1",
+          "center": [
+            5.5,
+            2.5
+          ],
+          "width": 1.2,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O2",
+          "kind": "window",
+          "wall_id": "W1",
+          "center": [
+            9.0,
+            2.5
+          ],
+          "width": 1.2,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O3",
+          "kind": "door",
+          "wall_id": "W3",
+          "center": [
+            8.5,
+            6.5
+          ],
+          "width": 0.8,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O4",
+          "kind": "door",
+          "wall_id": "W4",
+          "center": [
+            12.5,
+            5.5
+          ],
+          "width": 0.9,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O5",
+          "kind": "door",
+          "wall_id": "W5",
+          "center": [
+            5.5,
+            6.5
+          ],
+          "width": 0.8,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O6",
+          "kind": "door",
+          "wall_id": "W5",
+          "center": [
+            10.1,
+            6.5
+          ],
+          "width": 0.75,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O7",
+          "kind": "door",
+          "wall_id": "W6",
+          "center": [
+            10.1,
+            8.1
+          ],
+          "width": 0.7,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.7,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O8",
+          "kind": "window",
+          "wall_id": "W7",
+          "center": [
+            4.5,
+            10.0
+          ],
+          "width": 1.5,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "O9",
+          "kind": "window",
+          "wall_id": "W7",
+          "center": [
+            9.5,
+            10.0
+          ],
+          "width": 1.2,
+          "height": null,
+          "sill_height": null,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.6,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "R1",
+          "name": "BEDROOM 1",
+          "name_np": "शयनकक्ष",
+          "polygon": [
+            [
+              2.5,
+              2.5
+            ],
+            [
+              8.5,
+              2.5
+            ],
+            [
+              8.5,
+              6.5
+            ],
+            [
+              2.5,
+              6.5
+            ]
+          ],
+          "area_m2": 24.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "R2",
+          "name": "LIVING",
+          "name_np": "बैठक",
+          "polygon": [
+            [
+              8.5,
+              2.5
+            ],
+            [
+              12.5,
+              2.5
+            ],
+            [
+              12.5,
+              6.5
+            ],
+            [
+              8.5,
+              6.5
+            ]
+          ],
+          "area_m2": 16.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "R3",
+          "name": "KITCHEN",
+          "name_np": "भान्सा",
+          "polygon": [
+            [
+              8.5,
+              6.5
+            ],
+            [
+              12.5,
+              6.5
+            ],
+            [
+              12.5,
+              8.1
+            ],
+            [
+              8.5,
+              8.1
+            ]
+          ],
+          "area_m2": 6.4,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "R4",
+          "name": "BEDROOM 2",
+          "name_np": "शयनकक्ष",
+          "polygon": [
+            [
+              2.5,
+              6.5
+            ],
+            [
+              8.5,
+              6.5
+            ],
+            [
+              8.5,
+              8.1
+            ],
+            [
+              8.5,
+              10.0
+            ],
+            [
+              2.5,
+              10.0
+            ]
+          ],
+          "area_m2": 21.0,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "R5",
+          "name": "BATH",
+          "name_np": "शौचालय",
+          "polygon": [
+            [
+              8.5,
+              8.1
+            ],
+            [
+              12.5,
+              8.1
+            ],
+            [
+              12.5,
+              10.0
+            ],
+            [
+              8.5,
+              10.0
+            ]
+          ],
+          "area_m2": 7.6,
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.75,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        }
+      ],
+      "dimensions": [
+        {
+          "id": "D1",
+          "value": 10.0,
+          "unit": "m",
+          "label": "10.0 m",
+          "start": [
+            2.5,
+            10.65
+          ],
+          "end": [
+            12.5,
+            10.65
+          ],
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.9,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        },
+        {
+          "id": "D2",
+          "value": 7.5,
+          "unit": "m",
+          "label": "7.5 m",
+          "start": [
+            1.85,
+            2.5
+          ],
+          "end": [
+            1.85,
+            10.0
+          ],
+          "provenance": {
+            "source": "human_annotation",
+            "confidence": 0.9,
+            "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+          }
+        }
+      ],
+      "north_deg": 0.0,
+      "north_provenance": {
+        "source": "human_annotation",
+        "confidence": 0.9,
+        "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+      },
+      "scale_m_per_unit": 0.025,
+      "scale_provenance": {
+        "source": "human_annotation",
+        "confidence": 0.9,
+        "evidence": "human-annotated ground truth (synthetic example): fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+      },
+      "bbox": [
+        2.5,
+        2.5,
+        12.5,
+        10.0
+      ],
+      "warnings": [],
+      "meta": {
+        "page_index": 0,
+        "page_size_pt": [
+          842.0,
+          595.0
+        ],
+        "n_segments_raw": 61,
+        "n_texts": 11,
+        "image_count": 0,
+        "ai_used": false,
+        "north_frame": "degrees clockwise from 'up' on the page (0 = up)",
+        "scale_candidates": [
+          {
+            "value_m": 10.0,
+            "extent_pt": 400.0,
+            "implied_m_per_pt": 0.025
+          },
+          {
+            "value_m": 7.5,
+            "extent_pt": 300.0,
+            "implied_m_per_pt": 0.025
+          }
+        ],
+        "coordinate_frame": "pdf page points scaled to metres (y down)",
+        "snap_stats": {
+          "n_total": 61.0,
+          "n_horizontal": 25.0,
+          "n_vertical": 12.0,
+          "n_unsnapped": 24.0,
+          "n_dropped": 0.0,
+          "max_residual_deg": 0.0,
+          "mean_residual_deg": 0.0
+        },
+        "extraction": {
+          "n_runs": 59,
+          "n_walls_paired": 7,
+          "n_walls_single_line": 0,
+          "n_faces": 5,
+          "n_outer_cycles": 1
+        },
+        "unmatched_room_labels": [],
+        "ingest": {
+          "n_pages": 1,
+          "curves_skipped": 0,
+          "pdf_title": "Karmi sample naksa (base)",
+          "file_name": "naksa_base.pdf"
+        },
+        "dataset_note": "fixtures/naksa_base.scene.json (extraction cross-checked by a human annotator)"
+      }
+    },
+    "page_files": [
+      "drawing/page-01.png"
+    ],
+    "original_sha256": "1f33cbb88597dcf2d91dd4f40dda20e76fbab11464119435785109351f38e492",
+    "provenance": {
+      "source": "human_annotation",
+      "confidence": 1.0,
+      "evidence": "human-annotated ground truth (synthetic example)"
+    },
+    "notes": "synthetic example — withdrawal demo"
+  },
+  "photos": [
+    {
+      "file": "photos/p01-rear.jpg",
+      "observed": {
+        "schema_version": "0.1.0",
+        "stage": "foundation",
+        "stage_provenance": {
+          "source": "user_supplied",
+          "confidence": 0.5,
+          "evidence": "latest capture: rear_foundation_stage.jpg"
+        },
+        "captures": [
+          {
+            "file": "photos/p01-rear.jpg",
+            "taken_at": "2026-05-10T08:40:00",
+            "stage": "foundation",
+            "stage_confidence": 0.5,
+            "view": "rear",
+            "provenance": {
+              "source": "human_annotation",
+              "confidence": 0.5,
+              "evidence": "human-annotated ground truth (synthetic example): view/stage labels checked against the fixture sidecar"
+            }
+          }
+        ],
+        "elements": [],
+        "scale_refs": [],
+        "warnings": [
+          "No scale reference available — absolute sizes cannot be estimated from these photos; element confidences were capped at 0.30 and every size must be treated as unmeasured."
+        ],
+        "meta": {
+          "photo_count": 1,
+          "sidecars_used": [],
+          "photos_missing": []
+        }
+      },
+      "original_sha256": "5e4065d5cb97cc15e991a2b518f31157148b6b7684c3ea8f91a1d44ea740d2ae",
+      "redacted": true,
+      "provenance": {
+        "source": "human_annotation",
+        "confidence": 1.0,
+        "evidence": "human-annotated ground truth (synthetic example)"
+      },
+      "notes": "synthetic example — derived from the repository fixture fixtures/photos/rear_foundation_stage.jpg; EXIF-stripped copy + report in dataset/example/media/"
+    }
+  ],
+  "annotator": {
+    "annotator_id": "ann-002",
+    "role": "core_team",
+    "tool": "dataset/annotate.html"
+  },
+  "quality": {
+    "reviewed": true,
+    "double_annotated": false,
+    "n_annotators": 1,
+    "completeness": 0.8,
+    "issues": []
+  },
+  "notes": "SYNTHETIC EXAMPLE (not collected data). This record demonstrates the withdrawal path: the contributor asked for removal, the consent block is marked withdrawn, a redaction instruction was produced, and dataset.export refuses to include it in any release.",
+  "created_at": "2026-10-04T12:10:00Z"
+}

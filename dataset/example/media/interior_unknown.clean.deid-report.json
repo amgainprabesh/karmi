@@ -1,0 +1,28 @@
+{
+  "schema": "karmi-deid-report/0.1.0",
+  "kind": "photo",
+  "source_name": "interior_unknown.jpg",
+  "source_sha256": "6f0b445165bb1a1bb9c73f0fad3ab6bf0278cc29071e3cf2dc8c45a71a43fc40",
+  "generated_at": "2026-10-04T12:15:53+00:00",
+  "findings": [],
+  "metadata": {
+    "exif_present_before": false,
+    "gps_present_before": false,
+    "exif_present_after": false,
+    "gps_present_after": false,
+    "exif_fields_before": [],
+    "exif_fields_removed": [],
+    "gps_fields_removed": []
+  },
+  "pixel_sha256_before": "c6bd58b138c43691e77f56bd9517c29c37426a679552a50ecda7c394cc094e59",
+  "pixel_sha256_after": "c6bd58b138c43691e77f56bd9517c29c37426a679552a50ecda7c394cc094e59",
+  "pixels_unchanged": true,
+  "outputs": [
+    "interior_unknown.clean.jpg"
+  ],
+  "notes": [
+    "Container-level metadata strip (core.validate.strip_exif): decoded pixel data is bit-for-bit identical; the two pixel hashes below prove it.",
+    "Metadata is only half of photo privacy: people and number plates must be excluded or blurred by human review before release (dataset-plan §5).",
+    "No EXIF metadata was present on the source file; strip is a no-op."
+  ]
+}

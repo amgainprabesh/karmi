@@ -1,0 +1,110 @@
+{
+  "schema": "karmi-example-manifest/0.1.0",
+  "synthetic": true,
+  "warning": "Every record in this directory is SYNTHETIC — generated from the repository's own fixtures. No real building, person or consent form is involved.",
+  "generated_by": "dataset/example/build_examples.py",
+  "generated_at": "2026-10-04T12:15:53+00:00",
+  "records": [
+    {
+      "record_id": "karmi-example-0001",
+      "file": "karmi-example-0001.json",
+      "sha256": "c2ac9e8b955ad61314445fe722c204331d3110f6c187e610267d92a6f4a9ffd6",
+      "withdrawn": false,
+      "tier": "public",
+      "licence": "cc-by-4.0",
+      "pii_findings_from_scan": 0,
+      "summary": {
+        "record_id": "karmi-example-0001",
+        "synthetic": true,
+        "tier": "public",
+        "source_kind": "vector_pdf",
+        "licence": "cc-by-4.0",
+        "withdrawn": false,
+        "walls": 7,
+        "openings": 9,
+        "rooms": 5,
+        "photos": 3,
+        "photo_elements": 2
+      }
+    },
+    {
+      "record_id": "karmi-example-0002",
+      "file": "karmi-example-0002.json",
+      "sha256": "471eb9167f85ae84136dbfc745fab10855ee3a6c641d795dc40b6a4fa12ea687",
+      "withdrawn": false,
+      "tier": "public",
+      "licence": "cc-by-nc-4.0",
+      "pii_findings_from_scan": 0,
+      "summary": {
+        "record_id": "karmi-example-0002",
+        "synthetic": true,
+        "tier": "public",
+        "source_kind": "vector_pdf",
+        "licence": "cc-by-nc-4.0",
+        "withdrawn": false,
+        "walls": 7,
+        "openings": 9,
+        "rooms": 5,
+        "photos": 2,
+        "photo_elements": 2
+      }
+    },
+    {
+      "record_id": "karmi-example-0003",
+      "file": "karmi-example-0003.json",
+      "sha256": "4f28a182f45284d24846de1ab7582cd7814662e89424faa8f13f76ef9fe0265c",
+      "withdrawn": true,
+      "tier": "gated",
+      "licence": "cc-by-4.0",
+      "pii_findings_from_scan": 0,
+      "summary": {
+        "record_id": "karmi-example-0003",
+        "synthetic": true,
+        "tier": "gated",
+        "source_kind": "vector_pdf",
+        "licence": "cc-by-4.0",
+        "withdrawn": true,
+        "walls": 7,
+        "openings": 9,
+        "rooms": 5,
+        "photos": 1,
+        "photo_elements": 0
+      }
+    }
+  ],
+  "media": {
+    "front_walls_stage.jpg": {
+      "clean_copy": "front_walls_stage.clean.jpg",
+      "gps_present_before": false,
+      "gps_present_after": false,
+      "exif_fields_removed": [
+        "DateTimeDigitized",
+        "DateTimeOriginal"
+      ]
+    },
+    "side_columns_stage.jpg": {
+      "clean_copy": "side_columns_stage.clean.jpg",
+      "gps_present_before": false,
+      "gps_present_after": false,
+      "exif_fields_removed": [
+        "DateTimeDigitized",
+        "DateTimeOriginal"
+      ]
+    },
+    "rear_foundation_stage.jpg": {
+      "clean_copy": "rear_foundation_stage.clean.jpg",
+      "gps_present_before": false,
+      "gps_present_after": false,
+      "exif_fields_removed": [
+        "DateTimeDigitized",
+        "DateTimeOriginal"
+      ]
+    },
+    "interior_unknown.jpg": {
+      "clean_copy": "interior_unknown.clean.jpg",
+      "gps_present_before": false,
+      "gps_present_after": false,
+      "exif_fields_removed": []
+    }
+  }
+}

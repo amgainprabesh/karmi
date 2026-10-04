@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Karmi — naksa annotation tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Karmi dataset — single-file annotation tool.
+  Works fully offline: no CDN, no fonts, no build step, no network calls of any kind.
+  Open this file in any browser, load a drawing image + photos, annotate, export:
+    * one sidecar JSON per photo   (photo.jpg.json format read by core/observe.py)
+    * one full record JSON         (matches dataset/schema.py, pydantic-validated)
+
+  Export shape notes:
+    * Coordinates are stored in image pixels while annotating; the export converts
+      them to metres via the "metres per pixel" scale (SceneGraph units are metres).
+    * The record's `source_file` and photo `file` fields are deliberately opaque —
+      never write the contributor's original filename into a released record.
+    * If "withdrawn" is ticked the release tier is forced to "gated" (a withdrawn
+      record cannot sit in the public tier — dataset/schema.py enforces this).
+-->
+<style>
+  :root { --fg:#1b1f24; --muted:#5a6672; --line:#c9d1d9; --bg:#f6f8fa; --accent:#0b5cad; --warn:#8a4b00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, "Segoe UI", Arial, sans-serif; color:var(--fg); background:var(--bg); }
+  header { padding:10px 16px; background:#0f2537; color:#fff; }
+  header h1 { font-size:16px; margin:0 0 2px; }
+  header .sub { font-size:12px; color:#bcd2e8; }
+  #status { font-size:12px; color:#ffd479; min-height:16px; }
+  main { display:flex; gap:14px; padding:14px; align-items:flex-start; }
+  .pane { background:#fff; border:1px solid var(--line); border-radius:6px; padding:10px; }
+  #left { flex: 1 1 58%; min-width:420px; }
+  #right { flex: 1 1 42%; min-width:380px; max-height:88vh; overflow:auto; }
+  h2 { font-size:14px; margin:14px 0 6px; border-bottom:1px solid var(--line); padding-bottom:3px; }
+  h2:first-child { margin-top:0; }
+  h3 { font-size:13px; margin:10px 0 4px; color:var(--muted); }
+  label { font-size:12px; color:var(--muted); display:inline-block; margin:2px 8px 2px 0; }
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    font:13px system-ui, sans-serif; padding:3px 5px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--fg);
+  }
+  input[type=number] { width:78px; }
+  textarea { width:100%; min-height:48px; }
+  button { font:13px system-ui, sans-serif; padding:4px 10px; border:1px solid var(--line); border-radius:4px; background:#eef2f6; cursor:pointer; }
+  button:hover { background:#e2e9f1; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.danger { color:#a11; }
+  .toolbar { margin:6px 0; }
+  .toolbar button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #canvasWrap { position:relative; border:1px dashed var(--line); border-radius:4px; background:#fff; overflow:auto; max-height:62vh; }
+  canvas { display:block; max-width:100%; cursor:crosshair; }
+  .hint { font-size:12px; color:var(--muted); margin:4px 0; }
+  .warn { font-size:12px; color:var(--warn); }
+  .card { border:1px solid var(--line); border-radius:5px; padding:8px; margin:8px 0; background:#fbfcfe; }
+  .card .row { margin:3px 0; }
+  .chip { display:inline-block; border:1px solid var(--line); border-radius:10px; padding:0 7px; margin:1px 3px 1px 0; font-size:12px; background:#fff; }
+  ul.items { list-style:none; padding:0; margin:4px 0; }
+  ul.items li { border-bottom:1px dotted var(--line); padding:3px 0; font-size:12.5px; }
+  ul.items li:last-child { border-bottom:none; }
+  .mono { font-family: Consolas, "Courier New", monospace; font-size:12px; }
+  #exportOut { width:100%; min-height:180px; font-family:Consolas, monospace; font-size:11.5px; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:4px 12px; }
+  .muted { color:var(--muted); }
+  .badge-syn { background:#fff3cd; border:1px solid #e0b400; padding:0 6px; border-radius:8px; font-size:11px; }
+  details { margin:8px 0; }
+  summary { cursor:pointer; font-weight:600; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Karmi — naksa annotation tool <span class="badge-syn" id="synBadge" hidden>SYNTHETIC</span></h1>
+  <div class="sub">Labels one approved drawing + its site photos. Offline, single file.
+    Exports sidecar JSON (core/observe.py format) and a dataset record (dataset/schema.py format).
+    Never put real names or contact details into any field — use opaque ids.</div>
+  <div id="status"></div>
+</header>
+
+<main>
+  <!-- ======================= LEFT: drawing ======================= -->
+  <section class="pane" id="left">
+    <h2>1 · Drawing</h2>
+    <div class="row">
+      <label>Drawing image (PNG/JPG render of the naksa): <input type="file" id="drawingFile" accept="image/*"></label>
+      <button id="demoBtn" title="Fill everything with a synthetic demo so you can try the tool">Load synthetic demo</button>
+    </div>
+    <div class="row">
+      <label>metres per pixel: <input type="number" id="mpp" value="0.025" step="0.0001" min="0.0001"></label>
+      <span class="hint">from the drawing scale (e.g. a 1:100 CAD export ≈ 0.025 m/pt at 72 dpi). All exported geometry is in metres.</span>
+    </div>
+    <div class="toolbar">
+      <button data-tool="wall" class="active">Wall (drag)</button>
+      <button data-tool="opening">Opening (drag)</button>
+      <button data-tool="room">Room (click points)</button>
+      <button id="closeRoom">Close room</button>
+      <button id="cancelRoom">Cancel room</button>
+      <label><input type="checkbox" id="ortho" checked> snap to axis</label>
+    </div>
+    <div class="row">
+      <label>next room name (EN): <input type="text" id="roomNameEn" placeholder="BEDROOM 1"></label>
+      <label>नेपाली: <input type="text" id="roomNameNp" placeholder="शयनकक्ष"></label>
+    </div>
+    <div class="row">
+      <label>opening kind (for the next drawn opening):</label>
+      <select id="openingKind"><option value="door">door</option><option value="window">window</option><option value="vent">vent</option><option value="unknown">unknown</option></select>
+      <label>default wall thickness (m): <input type="number" id="wallThickness" value="0.23" step="0.01"></label>
+    </div>
+    <div id="canvasWrap"><canvas id="draw" width="800" height="560"></canvas></div>
+    <p class="hint">Wall/Opening: drag on the canvas. Room: click polygon corners, then “Close room”.
+      Everything stays in your browser; nothing is uploaded.</p>
+
+    <h3>Walls <span class="muted" id="wallCount"></span></h3>
+    <ul class="items" id="wallList"></ul>
+    <h3>Openings <span class="muted" id="openingCount"></span></h3>
+    <ul class="items" id="openingList"></ul>
+    <h3>Rooms <span class="muted" id="roomCount"></span></h3>
+    <ul class="items" id="roomList"></ul>
+    <h3>Dimensions</h3>
+    <ul class="items" id="dimList"></ul>
+    <div class="row">
+      <label>value <input type="number" id="dimValue" step="0.01" placeholder="10.0"></label>
+      <label>unit <select id="dimUnit"><option>m</option><option>ft</option><option>ft_in</option><option>unknown</option></select></label>
+      <label>label <input type="text" id="dimLabel" placeholder="10.0 m"></label>
+      <button id="addDim">Add dimension</button>
+    </div>
+  </section>
+
+  <!-- ======================= RIGHT: record ======================= -->
+  <section class="pane" id="right">
+    <h2>2 · Record</h2>
+    <div class="grid2">
+      <label>record id <input type="text" id="recordId" value="karmi-0001"></label>
+      <label>source kind <select id="sourceKind">
+        <option value="vector_pdf">vector_pdf</option><option value="raster_pdf">raster_pdf</option>
+        <option value="scan">scan</option><option value="image">image</option></select></label>
+      <label>municipality <input type="text" id="municipality" placeholder="Kathmandu Metropolitan City (or 'withheld')"></label>
+      <label>district <input type="text" id="district" placeholder="Kathmandu"></label>
+      <label>release tier <select id="releaseTier"><option value="public">public</option><option value="gated">gated</option></select></label>
+      <label><input type="checkbox" id="synthetic"> synthetic (example record)</label>
+      <label>public page files (comma-sep) <input type="text" id="pageFiles" placeholder="drawing/page-01.png"></label>
+      <label>drawing notes <input type="text" id="drawingNotes"></label>
+    </div>
+
+    <h2>3 · Consent &amp; licence</h2>
+    <p class="hint">One grant per signatory. A public record needs dataset release granted by
+      every signatory, and the record licence inside every signatory's licence scope
+      (Copyright Act 2059 / dataset-plan §4).</p>
+    <div class="grid2">
+      <label>licence <select id="licence">
+        <option value="cc-by-4.0">cc-by-4.0</option><option value="cc-by-sa-4.0">cc-by-sa-4.0</option>
+        <option value="cc-by-nc-4.0">cc-by-nc-4.0</option><option value="other">other</option></select></label>
+      <label>licence terms note (required for 'other') <input type="text" id="licenceTerms"></label>
+      <label>attribution line <input type="text" id="attribution"></label>
+      <label><input type="checkbox" id="withdrawn"> consent withdrawn</label>
+      <label>withdrawal reason <input type="text" id="withdrawalReason" placeholder="required if withdrawn"></label>
+    </div>
+    <div id="grants"></div>
+    <button id="addGrant">Add consent grant</button>
+
+    <h2>4 · Photos</h2>
+    <div class="row">
+      <label>add photo files: <input type="file" id="photoFiles" accept="image/*" multiple></label>
+      <button id="addBlankPhoto">Add blank photo entry</button>
+    </div>
+    <div id="photos"></div>
+
+    <h2>5 · Annotator &amp; quality</h2>
+    <div class="grid2">
+      <label>annotator id <input type="text" id="annotatorId" value="ann-001"></label>
+      <label>role <select id="annotatorRole"><option value="core_team">core_team</option>
+        <option value="volunteer">volunteer</option><option value="contributor">contributor</option></select></label>
+      <label><input type="checkbox" id="reviewed"> reviewed</label>
+      <label><input type="checkbox" id="doubleAnnotated"> double annotated</label>
+      <label>n annotators <input type="number" id="nAnnotators" value="1" min="1"></label>
+      <label>completeness 0–1 <input type="number" id="completeness" value="0.5" min="0" max="1" step="0.05"></label>
+    </div>
+    <label>record notes <textarea id="recordNotes" placeholder="anything a consumer must know"></textarea></label>
+
+    <h2>6 · Export</h2>
+    <div class="row">
+      <button class="primary" id="exportRecord">Export record JSON (dataset/schema.py)</button>
+      <button id="exportSidecars">Export photo sidecars (core/observe.py)</button>
+      <button id="validateBtn">Validate before export</button>
+    </div>
+    <p class="hint">Both exports download a file <em>and</em> appear below so you can copy them.
+      Review every record against the consent form before it enters a release.</p>
+    <textarea id="exportOut" readonly placeholder="exported JSON appears here"></textarea>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ===================================================================== *
+ *  Karmi annotation tool — vanilla JS, no dependencies, no network.
+ * ===================================================================== */
+
+const SCHEMA_VERSION = "0.1.0";
+const round4 = v => Math.round(v * 10000) / 10000;
+const orNull = s => (s === undefined || s === null || String(s).trim() === "") ? null : String(s).trim();
+const todayISO = () => new Date().toISOString();
+
+/* ------------------------------- state ------------------------------- */
+const state = {
+  tool: "wall",
+  drag: null,          // {start:[x,y], now:[x,y]}
+  pendingRoom: [],     // [[x,y], ...] px
+  drawing: {
+    image: null, fileName: null,
+    mPerPx: 0.025,
+    walls: [], openings: [], rooms: [], dimensions: [],
+    nextId: { W: 1, O: 1, R: 1, D: 1 },
+  },
+  record: {
+    recordId: "karmi-0001", synthetic: false, sourceKind: "vector_pdf",
+    municipality: "", district: "", releaseTier: "public",
+    pageFiles: "", drawingNotes: "",
+    licence: "cc-by-4.0", licenceTerms: "", attribution: "",
+    withdrawn: false, withdrawalReason: "",
+    notes: "",
+    annotatorId: "ann-001", annotatorRole: "core_team",
+    reviewed: false, doubleAnnotated: false, nAnnotators: 1, completeness: 0.5,
+    grants: [],
+  },
+  photos: [],
+};
+
+function blankGrant() {
+  return { roles: ["homeowner"], method: "written_form", grantedAt: new Date().toISOString().slice(0, 10),
+           licences: ["cc-by-4.0"], datasetRelease: true, modelTraining: true,
+           restrictions: "", signatoryId: "", evidence: "", guardian: false };
+}
+function blankPhoto(name) {
+  return { file: name || "photos/p01.jpg", view: "unknown", stage: "unknown", takenAt: "", notes: "",
+           redacted: false, elements: [], scaleRefs: [] };
+}
+function blankElement() {
+  return { kind: "wall", length: "", width: "", height: "", thickness: "",
+           locationHint: "", matchesSceneId: "", confidence: 0.8, evidence: "" };
+}
+function blankScaleRef() {
+  return { kind: "door_height", value: "", unit: "m", confidence: 0.8, evidence: "" };
+}
+state.record.grants.push(blankGrant());
+state.photos.push(blankPhoto("photos/p01-front.jpg"));
+
+/* ------------------------------ helpers ------------------------------ */
+const $ = id => document.getElementById(id);
+const status = msg => { $("status").textContent = msg; };
+
+function toM(p, mpp) { return [round4(p[0] * mpp), round4(p[1] * mpp)]; }
+function wallLenPx(w) { return Math.hypot(w.end[0] - w.start[0], w.end[1] - w.start[1]); }
+function polyAreaM2(pts, mpp) {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+    a += x1 * y2 - x2 * y1;
+  }
+  return round4(Math.abs(a / 2) * mpp * mpp);
+}
+function bboxFromWalls(walls, mpp) {
+  if (!walls.length) return null;
+  const xs = [], ys = [];
+  walls.forEach(w => { xs.push(w.start[0], w.end[0]); ys.push(w.start[1], w.end[1]); });
+  return [round4(Math.min(...xs) * mpp), round4(Math.min(...ys) * mpp),
+          round4(Math.max(...xs) * mpp), round4(Math.max(...ys) * mpp)];
+}
+function nearestWallId(center) {
+  let best = "", bestD = Infinity;
+  state.drawing.walls.forEach(w => {
+    const mx = (w.start[0] + w.end[0]) / 2, my = (w.start[1] + w.end[1]) / 2;
+    const d = Math.hypot(center[0] - mx, center[1] - my);
+    if (d < bestD) { bestD = d; best = w.id; }
+  });
+  return best;
+}
+function splitLines(s) {
+  return String(s || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+}
+function provHuman(evidence) {
+  return { source: "human_annotation", confidence: 1.0, evidence: evidence || "dataset/annotate.html" };
+}
+
+/* ------------------------------ canvas ------------------------------- */
+const canvas = $("draw");
+const ctx = canvas.getContext("2d");
+
+function canvasPos(ev) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) * (canvas.width / Math.max(rect.width, 1));
+  const y = (ev.clientY - rect.top) * (canvas.height / Math.max(rect.height, 1));
+  return [Math.max(0, Math.min(canvas.width, Math.round(x))), Math.max(0, Math.min(canvas.height, Math.round(y)))];
+}
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (state.drawing.image) ctx.drawImage(state.drawing.image, 0, 0, canvas.width, canvas.height);
+
+  // rooms (orange)
+  ctx.lineWidth = 2; ctx.font = "12px system-ui";
+  state.drawing.rooms.forEach(r => {
+    ctx.strokeStyle = "#d97706"; ctx.fillStyle = "rgba(217,119,6,0.08)";
+    ctx.beginPath();
+    r.polygon.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (r.polygon.length) {
+      const cx = r.polygon.reduce((s, p) => s + p[0], 0) / r.polygon.length;
+      const cy = r.polygon.reduce((s, p) => s + p[1], 0) / r.polygon.length;
+      ctx.fillStyle = "#92400e"; ctx.fillText(r.name || r.id, cx - 20, cy);
+    }
+  });
+  // walls (blue)
+  state.drawing.walls.forEach(w => {
+    ctx.strokeStyle = "#0b5cad"; ctx.lineWidth = Math.max(2, 3);
+    ctx.beginPath(); ctx.moveTo(w.start[0], w.start[1]); ctx.lineTo(w.end[0], w.end[1]); ctx.stroke();
+    ctx.fillStyle = "#0b5cad"; ctx.fillText(w.id, (w.start[0] + w.end[0]) / 2 + 3, (w.start[1] + w.end[1]) / 2 - 4);
+  });
+  // openings (green)
+  state.drawing.openings.forEach(o => {
+    ctx.strokeStyle = "#15803d"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(o.start[0], o.start[1]); ctx.lineTo(o.end[0], o.end[1]); ctx.stroke();
+    ctx.fillStyle = "#15803d"; ctx.fillText(o.id + " " + o.kind, (o.start[0] + o.end[0]) / 2 + 3, (o.start[1] + o.end[1]) / 2 + 12);
+  });
+  // pending room points (red)
+  ctx.fillStyle = "#b91c1c";
+  state.pendingRoom.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 3, 0, Math.PI * 2); ctx.fill(); });
+  if (state.pendingRoom.length > 1) {
+    ctx.strokeStyle = "#b91c1c"; ctx.setLineDash([4, 4]); ctx.beginPath();
+    state.pendingRoom.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // drag preview (grey)
+  if (state.drag) {
+    ctx.strokeStyle = "#64748b"; ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(state.drag.start[0], state.drag.start[1]);
+    ctx.lineTo(state.drag.now[0], state.drag.now[1]); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+function snap(p0, p1) {
+  if (!$("ortho").checked) return p1;
+  const dx = Math.abs(p1[0] - p0[0]), dy = Math.abs(p1[1] - p0[1]);
+  return dx >= dy ? [p1[0], p0[1]] : [p0[0], p1[1]];
+}
+
+canvas.addEventListener("mousedown", ev => {
+  const p = canvasPos(ev);
+  if (state.tool === "wall" || state.tool === "opening") {
+    state.drag = { start: p, now: p };
+  } else if (state.tool === "room") {
+    state.pendingRoom.push(p); redraw();
+  }
+});
+canvas.addEventListener("mousemove", ev => {
+  if (!state.drag) return;
+  state.drag.now = snap(state.drag.start, canvasPos(ev));
+  redraw();
+});
+window.addEventListener("mouseup", ev => {
+  if (!state.drag) return;
+  const end = snap(state.drag.start, state.drag.now);
+  const start = state.drag.start;
+  state.drag = null;
+  const len = Math.hypot(end[0] - start[0], end[1] - start[1]);
+  if (len < 4) { redraw(); return; }
+  if (state.tool === "wall") {
+    const w = { id: "W" + state.drawing.nextId.W++, start, end,
+                thickness: $("wallThickness").value === "" ? null : Number($("wallThickness").value),
+                isExternal: null, confidence: 0.95 };
+    state.drawing.walls.push(w);
+  } else if (state.tool === "opening") {
+    const center = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
+    const o = { id: "O" + state.drawing.nextId.O++, kind: $("openingKind").value,
+                wallId: nearestWallId(center), start, end,
+                widthPx: len, height: null, sillHeight: null, confidence: 0.9 };
+    state.drawing.openings.push(o);
+  }
+  renderLists(); redraw();
+});
+
+$("closeRoom").addEventListener("click", () => {
+  if (state.pendingRoom.length < 3) { status("A room needs at least 3 points."); return; }
+  const r = { id: "R" + state.drawing.nextId.R++, name: orNull($("roomNameEn").value),
+              nameNp: orNull($("roomNameNp").value), polygon: state.pendingRoom.slice() };
+  state.drawing.rooms.push(r);
+  state.pendingRoom = [];
+  renderLists(); redraw();
+});
+$("cancelRoom").addEventListener("click", () => { state.pendingRoom = []; redraw(); });
+document.querySelectorAll(".toolbar [data-tool]").forEach(b => {
+  b.addEventListener("click", () => {
+    state.tool = b.dataset.tool;
+    document.querySelectorAll(".toolbar [data-tool]").forEach(x => x.classList.toggle("active", x === b));
+  });
+});
+$("addDim").addEventListener("click", () => {
+  const v = $("dimValue").value;
+  if (v === "") { status("Dimension needs a value."); return; }
+  state.drawing.dimensions.push({ id: "D" + state.drawing.nextId.D++, value: Number(v),
+    unit: $("dimUnit").value, label: orNull($("dimLabel").value) });
+  $("dimValue").value = ""; $("dimLabel").value = "";
+  renderLists();
+});
+
+/* --------------------------- item lists ------------------------------ */
+function renderLists() {
+  const d = state.drawing;
+  $("wallCount").textContent = "(" + d.walls.length + ")";
+  $("openingCount").textContent = "(" + d.openings.length + ")";
+  $("roomCount").textContent = "(" + d.rooms.length + ")";
+
+  $("wallList").innerHTML = d.walls.map((w, i) =>
+    `<li data-wall="${i}">${w.id} (${w.start})→(${w.end}) · thickness
+      <input type="number" data-field="thickness" step="0.01" value="${w.thickness ?? ""}" style="width:64px"> m
+      · ${(wallLenPx(w) * state.drawing.mPerPx).toFixed(2)} m
+      <button class="danger" data-del="wall">del</button></li>`).join("") || "<li class='muted'>none</li>";
+
+  const wallOpts = w => d.walls.map(x => `<option value="${x.id}" ${x.id === w ? "selected" : ""}>${x.id}</option>`).join("");
+  $("openingList").innerHTML = d.openings.map((o, i) =>
+    `<li data-opening="${i}">${o.id} · <select data-field="kind">
+      ${["door","window","vent","unknown"].map(k => `<option ${k === o.kind ? "selected" : ""}>${k}</option>`).join("")}
+     </select> · on wall <select data-field="wallId"><option value="">—</option>${wallOpts(o.wallId)}</select>
+     · ${(o.widthPx * state.drawing.mPerPx).toFixed(2)} m
+     <button class="danger" data-del="opening">del</button></li>`).join("") || "<li class='muted'>none</li>";
+
+  $("roomList").innerHTML = d.rooms.map((r, i) =>
+    `<li data-room="${i}">${r.id} · <input type="text" data-field="name" value="${r.name || ""}" placeholder="EN name">
+      <input type="text" data-field="nameNp" value="${r.nameNp || ""}" placeholder="नेपाली">
+      · ${polyAreaM2(r.polygon, state.drawing.mPerPx).toFixed(2)} m²
+      <button class="danger" data-del="room">del</button></li>`).join("") || "<li class='muted'>none</li>";
+
+  $("dimList").innerHTML = d.dimensions.map((x, i) =>
+    `<li data-dim="${i}">${x.id} · ${x.value} ${x.unit} ${x.label ? "· " + x.label : ""}
+      <button class="danger" data-del="dim">del</button></li>`).join("") || "<li class='muted'>none</li>";
+}
+
+function wireListDeletes(listId, kind) {
+  $(listId).addEventListener("click", ev => {
+    if (ev.target.dataset.del !== kind) return;
+    const li = ev.target.closest("li");
+    const idx = Number(li.dataset[kind === "dim" ? "dim" : kind]);
+    const map = { wall: "walls", opening: "openings", room: "rooms", dim: "dimensions" };
+    state.drawing[map[kind]].splice(idx, 1);
+    renderLists(); redraw();
+  });
+  $(listId).addEventListener("input", ev => {
+    const li = ev.target.closest("li"); if (!li) return;
+    const idx = Number(li.dataset[kind === "dim" ? "dim" : kind]);
+    const field = ev.target.dataset.field; if (!field) return;
+    const map = { wall: "walls", opening: "openings", room: "rooms", dim: "dimensions" };
+    const item = state.drawing[map[kind]][idx];
+    if (field === "thickness") item.thickness = ev.target.value === "" ? null : Number(ev.target.value);
+    else if (field === "wallId") item.wallId = ev.target.value;
+    else if (field === "kind") item.kind = ev.target.value;
+    else if (field === "name") item.name = orNull(ev.target.value);
+    else if (field === "nameNp") item.nameNp = orNull(ev.target.value);
+  });
+}
+wireListDeletes("wallList", "wall");
+wireListDeletes("openingList", "opening");
+wireListDeletes("roomList", "room");
+wireListDeletes("dimList", "dim");
+
+/* ------------------------------ grants ------------------------------- */
+const ROLE_OPTS = ["homeowner", "drawing_author", "photographer"];
+const LIC_OPTS = ["cc-by-4.0", "cc-by-sa-4.0", "cc-by-nc-4.0", "other"];
+const METHOD_OPTS = ["written_form", "digital_form", "email", "verbal_witnessed"];
+
+function renderGrants() {
+  $("grants").innerHTML = state.record.grants.map((g, i) => `
+    <div class="card" data-grant="${i}">
+      <div class="row"><b>grant ${i + 1}</b>
+        <button class="danger" data-delgrant="${i}" style="float:right">remove</button></div>
+      <div class="row">roles:
+        ${ROLE_OPTS.map(r => `<label><input type="checkbox" data-role="${r}" ${g.roles.includes(r) ? "checked" : ""}> ${r}</label>`).join("")}
+      </div>
+      <div class="row">method:
+        <select data-field="method">${METHOD_OPTS.map(m => `<option ${m === g.method ? "selected" : ""}>${m}</option>`).join("")}</select>
+        granted at: <input type="date" data-field="grantedAt" value="${g.grantedAt}">
+      </div>
+      <div class="row">licence scope:
+        ${LIC_OPTS.map(l => `<label><input type="checkbox" data-lic="${l}" ${g.licences.includes(l) ? "checked" : ""}> ${l}</label>`).join("")}
+      </div>
+      <div class="row">
+        <label><input type="checkbox" data-field="datasetRelease" ${g.datasetRelease ? "checked" : ""}> dataset release</label>
+        <label><input type="checkbox" data-field="modelTraining" ${g.modelTraining ? "checked" : ""}> model training</label>
+        <label><input type="checkbox" data-field="guardian" ${g.guardian ? "checked" : ""}> guardian consent</label>
+      </div>
+      <div class="row">
+        <label>signatory id <input type="text" data-field="signatoryId" value="${g.signatoryId}" placeholder="form-c-0012 (no names!)"></label>
+        <label>evidence <input type="text" data-field="evidence" value="${g.evidence}"></label>
+      </div>
+      <div class="row"><label>restrictions (one per line) <textarea data-field="restrictions" style="min-height:34px">${g.restrictions}</textarea></label></div>
+    </div>`).join("");
+}
+$("grants").addEventListener("change", ev => {
+  const card = ev.target.closest("[data-grant]"); if (!card) return;
+  const g = state.record.grants[Number(card.dataset.grant)];
+  if (ev.target.dataset.role) {
+    const r = ev.target.dataset.role;
+    if (ev.target.checked) { if (!g.roles.includes(r)) g.roles.push(r); }
+    else g.roles = g.roles.filter(x => x !== r);
+  } else if (ev.target.dataset.lic) {
+    const l = ev.target.dataset.lic;
+    if (ev.target.checked) { if (!g.licences.includes(l)) g.licences.push(l); }
+    else g.licences = g.licences.filter(x => x !== l);
+  } else if (ev.target.dataset.field) {
+    const f = ev.target.dataset.field;
+    g[f] = ev.target.type === "checkbox" ? ev.target.checked : ev.target.value;
+  }
+});
+$("grants").addEventListener("input", ev => {
+  const card = ev.target.closest("[data-grant]"); if (!card) return;
+  const f = ev.target.dataset.field; if (!f) return;
+  const g = state.record.grants[Number(card.dataset.grant)];
+  if (ev.target.type !== "checkbox") g[f] = ev.target.value;
+});
+$("addGrant").addEventListener("click", () => { state.record.grants.push(blankGrant()); renderGrants(); });
+
+/* ------------------------------ photos ------------------------------- */
+const VIEW_OPTS = ["front", "side", "rear", "interior", "aerial", "unknown"];
+const STAGE_OPTS = ["unknown", "site", "foundation", "columns", "walls", "slab", "roof", "finishing", "complete"];
+const KIND_OPTS = ["wall", "opening", "column", "slab", "roof", "setback", "other"];
+const SR_KINDS = ["brick_course", "door_height", "user_dimension", "known_object", "unknown"];
+const SR_UNITS = ["m", "mm", "ft"];
+
+function renderPhotos() {
+  $("photos").innerHTML = state.photos.map((p, i) => `
+    <div class="card" data-photo="${i}">
+      <div class="row"><b>photo ${i + 1}</b>
+        <button class="danger" data-delphoto="${i}" style="float:right">remove</button></div>
+      <div class="row">
+        <label>file <input type="text" data-field="file" value="${p.file}" placeholder="photos/p01-front.jpg"></label>
+        <label><input type="checkbox" data-field="redacted" ${p.redacted ? "checked" : ""}> de-identified copy ready</label>
+      </div>
+      <div class="row">
+        view <select data-field="view">${VIEW_OPTS.map(v => `<option ${v === p.view ? "selected" : ""}>${v}</option>`).join("")}</select>
+        stage <select data-field="stage">${STAGE_OPTS.map(s => `<option ${s === p.stage ? "selected" : ""}>${s}</option>`).join("")}</select>
+        <label>taken at <input type="text" data-field="takenAt" value="${p.takenAt}" placeholder="2026-06-08T10:30:00+05:45"></label>
+      </div>
+      <div class="row"><label>notes <input type="text" data-field="notes" value="${p.notes}"></label></div>
+      <h3>elements (${p.elements.length})</h3>
+      ${p.elements.map((e, j) => `
+        <div class="card" data-el="${j}" style="background:#fff">
+          <div class="row">kind <select data-elfield="kind">${KIND_OPTS.map(k => `<option ${k === e.kind ? "selected" : ""}>${k}</option>`).join("")}</select>
+            <button class="danger" data-delel="${j}" style="float:right">remove</button></div>
+          <div class="row">
+            <label>length <input type="number" data-elfield="length" step="0.01" value="${e.length}"></label>
+            <label>width <input type="number" data-elfield="width" step="0.01" value="${e.width}"></label>
+            <label>height <input type="number" data-elfield="height" step="0.01" value="${e.height}"></label>
+            <label>thickness <input type="number" data-elfield="thickness" step="0.01" value="${e.thickness}"></label>
+          </div>
+          <div class="row">
+            <label>location <input type="text" data-elfield="locationHint" value="${e.locationHint}" placeholder="front-left corner"></label>
+            <label>matches scene id <input type="text" data-elfield="matchesSceneId" value="${e.matchesSceneId}" placeholder="W1"></label>
+            <label>conf <input type="number" data-elfield="confidence" step="0.05" min="0" max="1" value="${e.confidence}"></label>
+          </div>
+          <div class="row"><label>evidence <input type="text" data-elfield="evidence" value="${e.evidence}" placeholder="tape measure"></label></div>
+        </div>`).join("")}
+      <button data-addel="${i}">Add element</button>
+      <h3>scale references (${p.scaleRefs.length})</h3>
+      ${p.scaleRefs.map((r, j) => `
+        <div class="card" data-sr="${j}" style="background:#fff">
+          <div class="row">
+            kind <select data-srfield="kind">${SR_KINDS.map(k => `<option ${k === r.kind ? "selected" : ""}>${k}</option>`).join("")}</select>
+            value <input type="number" data-srfield="value" step="0.01" value="${r.value}">
+            unit <select data-srfield="unit">${SR_UNITS.map(u => `<option ${u === r.unit ? "selected" : ""}>${u}</option>`).join("")}</select>
+            conf <input type="number" data-srfield="confidence" step="0.05" min="0" max="1" value="${r.confidence}">
+            <button class="danger" data-delsr="${j}" style="float:right">remove</button>
+          </div>
+          <div class="row"><label>evidence <input type="text" data-srfield="evidence" value="${r.evidence}"></label></div>
+        </div>`).join("")}
+      <button data-addsr="${i}">Add scale reference</button>
+    </div>`).join("") || "<p class='muted'>no photos yet</p>";
+}
+
+$("photos").addEventListener("click", ev => {
+  const t = ev.target;
+  const card = t.closest("[data-photo]");
+  if (card) {
+    const i = Number(card.dataset.photo);
+    if (t.dataset.delphoto !== undefined) { state.photos.splice(i, 1); renderPhotos(); return; }
+    if (t.dataset.addel !== undefined) { state.photos[i].elements.push(blankElement()); renderPhotos(); return; }
+    if (t.dataset.addsr !== undefined) { state.photos[i].scaleRefs.push(blankScaleRef()); renderPhotos(); return; }
+    const elCard = t.closest("[data-el]");
+    if (elCard && t.dataset.delel !== undefined) { state.photos[i].elements.splice(Number(elCard.dataset.el), 1); renderPhotos(); return; }
+    const srCard = t.closest("[data-sr]");
+    if (srCard && t.dataset.delsr !== undefined) { state.photos[i].scaleRefs.splice(Number(srCard.dataset.sr), 1); renderPhotos(); return; }
+  }
+});
+$("photos").addEventListener("input", ev => { applyPhotoField(ev.target); });
+$("photos").addEventListener("change", ev => { applyPhotoField(ev.target); });
+
+function applyPhotoField(t) {
+  const card = t.closest("[data-photo]"); if (!card) return;
+  const p = state.photos[Number(card.dataset.photo)];
+  const elCard = t.closest("[data-el]");
+  const srCard = t.closest("[data-sr]");
+  const field = t.dataset.field, ef = t.dataset.elfield, sf = t.dataset.srfield;
+  if (ef !== undefined && elCard) {
+    const e = p.elements[Number(elCard.dataset.el)];
+    if (t.type === "number") e[ef] = t.value === "" ? "" : Number(t.value);
+    else e[ef] = t.value;
+  } else if (sf !== undefined && srCard) {
+    const r = p.scaleRefs[Number(srCard.dataset.sr)];
+    if (t.type === "number") r[sf] = t.value === "" ? "" : Number(t.value);
+    else r[sf] = t.value;
+  } else if (field !== undefined) {
+    p[field] = t.type === "checkbox" ? t.checked : t.value;
+  }
+}
+
+$("photoFiles").addEventListener("change", ev => {
+  Array.from(ev.target.files).forEach(f => {
+    const p = blankPhoto("photos/" + f.name.replace(/[^A-Za-z0-9._-]/g, "_"));
+    const reader = new FileReader();
+    reader.onload = () => { p._thumb = reader.result; renderPhotos(); };
+    reader.readAsDataURL(f);
+    state.photos.push(p);
+  });
+  ev.target.value = "";
+  renderPhotos();
+});
+$("addBlankPhoto").addEventListener("click", () => { state.photos.push(blankPhoto("photos/p" + (state.photos.length + 1) + ".jpg")); renderPhotos(); });
+
+/* --------------------------- record fields --------------------------- */
+function wireRecordFields() {
+  const bind = (id, fn) => {
+    const el = $(id);
+    const h = () => fn(el.type === "checkbox" ? el.checked : el.value);
+    el.addEventListener("input", h); el.addEventListener("change", h);
+  };
+  bind("recordId", v => state.record.recordId = v);
+  bind("sourceKind", v => state.record.sourceKind = v);
+  bind("municipality", v => state.record.municipality = v);
+  bind("district", v => state.record.district = v);
+  bind("releaseTier", v => state.record.releaseTier = v);
+  bind("synthetic", v => { state.record.synthetic = v; $("synBadge").hidden = !v; });
+  bind("pageFiles", v => state.record.pageFiles = v);
+  bind("drawingNotes", v => state.record.drawingNotes = v);
+  bind("licence", v => state.record.licence = v);
+  bind("licenceTerms", v => state.record.licenceTerms = v);
+  bind("attribution", v => state.record.attribution = v);
+  bind("withdrawalReason", v => state.record.withdrawalReason = v);
+  bind("recordNotes", v => state.record.notes = v);
+  bind("annotatorId", v => state.record.annotatorId = v);
+  bind("annotatorRole", v => state.record.annotatorRole = v);
+  bind("reviewed", v => state.record.reviewed = v);
+  bind("doubleAnnotated", v => state.record.doubleAnnotated = v);
+  bind("nAnnotators", v => state.record.nAnnotators = Number(v) || 1);
+  bind("completeness", v => state.record.completeness = Number(v) || 0);
+  bind("mpp", v => { state.drawing.mPerPx = Number(v) || 0; renderLists(); });
+  $("withdrawn").addEventListener("change", () => {
+    state.record.withdrawn = $("withdrawn").checked;
+    if (state.record.withdrawn) { $("releaseTier").value = "gated"; state.record.releaseTier = "gated"; }
+  });
+}
+wireRecordFields();
+
+$("drawingFile").addEventListener("change", ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = () => {
+    img.onload = () => {
+      state.drawing.image = img; state.drawing.fileName = f.name;
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      redraw(); status("Drawing loaded: " + img.naturalWidth + "×" + img.naturalHeight + " px. Original filename is NOT written into the record.");
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+});
+
+/* ------------------------------ export ------------------------------- */
+function buildObserved(p) {
+  const stage = p.stage || "unknown";
+  const conf = stage !== "unknown" ? 0.9 : 0.0;
+  return {
+    schema_version: SCHEMA_VERSION,
+    stage: stage,
+    stage_provenance: { source: "human_annotation", confidence: conf, evidence: "stage labelled in dataset/annotate.html" },
+    captures: [{
+      file: p.file, taken_at: orNull(p.takenAt), stage: stage, stage_confidence: conf,
+      view: p.view || "unknown",
+      provenance: { source: "human_annotation", confidence: 0.9, evidence: "view/stage labelled in dataset/annotate.html" },
+    }],
+    elements: p.elements.map((e, j) => {
+      const size = {};
+      ["length", "width", "height", "thickness"].forEach(k => { if (e[k] !== "" && e[k] !== null && e[k] !== undefined) size[k] = Number(e[k]); });
+      return {
+        id: "obs-" + String(j + 1).padStart(3, "0"),
+        kind: e.kind || "other",
+        approx_size: size,
+        location_hint: orNull(e.locationHint),
+        matches_scene_id: orNull(e.matchesSceneId),
+        provenance: { source: "human_annotation", confidence: Number(e.confidence) || 0.8,
+                      evidence: orNull(e.evidence) || "hand-entered in dataset/annotate.html" },
+      };
+    }),
+    scale_refs: p.scaleRefs.map(r => ({
+      kind: r.kind || "unknown",
+      value: Number(r.value) || 0,
+      unit: r.unit || "m",
+      provenance: { source: "human_annotation", confidence: Number(r.confidence) || 0.8,
+                    evidence: orNull(r.evidence) || "hand-entered in dataset/annotate.html" },
+    })),
+    warnings: [],
+    meta: { tool: "dataset/annotate.html" },
+  };
+}
+
+function buildRecord() {
+  const d = state.drawing, mpp = d.mPerPx || 0;
+  const scene = {
+    schema_version: SCHEMA_VERSION,
+    source_kind: state.record.sourceKind,
+    source_file: null,
+    units: "m",
+    walls: d.walls.map(w => ({
+      id: w.id, start: toM(w.start, mpp), end: toM(w.end, mpp),
+      thickness: w.thickness === null || w.thickness === "" ? null : Number(w.thickness),
+      is_external: w.isExternal ?? null,
+      provenance: { source: "human_annotation", confidence: Number(w.confidence) || 0.95,
+                    evidence: "dataset/annotate.html — drawn wall segment" },
+    })),
+    openings: d.openings.map(o => ({
+      id: o.id, kind: o.kind, wall_id: orNull(o.wallId), center: toM([(o.start[0] + o.end[0]) / 2, (o.start[1] + o.end[1]) / 2], mpp),
+      width: round4(o.widthPx * mpp), height: o.height ?? null, sill_height: o.sillHeight ?? null,
+      provenance: { source: "human_annotation", confidence: Number(o.confidence) || 0.9,
+                    evidence: "dataset/annotate.html — drawn opening" },
+    })),
+    rooms: d.rooms.map(r => ({
+      id: r.id, name: orNull(r.name), name_np: orNull(r.nameNp),
+      polygon: r.polygon.map(p => toM(p, mpp)),
+      area_m2: polyAreaM2(r.polygon, mpp),
+      provenance: { source: "human_annotation", confidence: 0.9, evidence: "dataset/annotate.html — polygon + label" },
+    })),
+    dimensions: d.dimensions.map(x => ({
+      id: x.id, value: Number(x.value), unit: x.unit || "m", label: orNull(x.label),
+      start: null, end: null,
+      provenance: { source: "human_annotation", confidence: 0.9, evidence: "dataset/annotate.html — typed dimension" },
+    })),
+    north_deg: null,
+    north_provenance: { source: "default", confidence: 0.0, evidence: null },
+    scale_m_per_unit: mpp > 0 ? mpp : null,
+    scale_provenance: mpp > 0
+      ? { source: "human_annotation", confidence: 0.8, evidence: "metres-per-pixel set in dataset/annotate.html" }
+      : { source: "default", confidence: 0.0, evidence: null },
+    bbox: bboxFromWalls(d.walls, mpp),
+    warnings: [],
+    meta: { tool: "dataset/annotate.html", annotation_date: todayISO().slice(0, 10) },
+  };
+  const r = state.record;
+  return {
+    schema_version: SCHEMA_VERSION,
+    record_id: r.recordId,
+    synthetic: r.synthetic,
+    source_kind: r.sourceKind,
+    jurisdiction: (orNull(r.municipality) || orNull(r.district))
+      ? { municipality: orNull(r.municipality), district: orNull(r.district), ward: null }
+      : null,
+    consent: {
+      grants: r.grants.map(g => ({
+        roles: g.roles.slice(),
+        method: g.method,
+        granted_at: g.grantedAt,
+        scope: {
+          licence_scope: g.licences.slice(),
+          dataset_release: !!g.datasetRelease,
+          model_training: !!g.modelTraining,
+          restrictions: splitLines(g.restrictions),
+        },
+        signatory_id: orNull(g.signatoryId),
+        evidence: orNull(g.evidence),
+        guardian: !!g.guardian,
+      })),
+      withdrawn: !!r.withdrawn,
+      withdrawn_at: r.withdrawn ? todayISO() : null,
+      withdrawal_reason: r.withdrawn ? orNull(r.withdrawalReason) : null,
+      withdrawal_requested_by: null,
+    },
+    licence: { id: r.licence, terms_note: orNull(r.licenceTerms), attribution: orNull(r.attribution) },
+    release_tier: r.withdrawn ? "gated" : r.releaseTier,
+    drawing: {
+      scene: scene,
+      page_files: String(r.pageFiles || "").split(",").map(s => s.trim()).filter(Boolean),
+      original_sha256: null,
+      provenance: provHuman("dataset/annotate.html — drawing annotation"),
+      notes: orNull(r.drawingNotes),
+    },
+    photos: state.photos.map(p => ({
+      file: p.file,
+      observed: buildObserved(p),
+      original_sha256: null,
+      redacted: !!p.redacted,
+      provenance: provHuman("dataset/annotate.html — photo annotation"),
+      notes: orNull(p.notes),
+    })),
+    annotator: { annotator_id: r.annotatorId, role: r.annotatorRole, tool: "dataset/annotate.html" },
+    quality: {
+      reviewed: !!r.reviewed,
+      double_annotated: !!r.doubleAnnotated,
+      n_annotators: Number(r.nAnnotators) || 1,
+      completeness: Number(r.completeness) || 0,
+      issues: [],
+    },
+    notes: orNull(r.notes),
+    created_at: todayISO(),
+  };
+}
+
+function buildSidecars() {
+  return state.photos.map(p => ({
+    name: p.file.split("/").pop() + ".json",
+    json: {
+      photo: p.file.split("/").pop(),
+      synthetic: !!state.record.synthetic,
+      taken_at: orNull(p.takenAt),
+      view: p.view || "unknown",
+      stage: p.stage || "unknown",
+      notes: orNull(p.notes),
+      elements: p.elements.map(e => {
+        const size = {};
+        ["length", "width", "height", "thickness"].forEach(k => { if (e[k] !== "" && e[k] !== null && e[k] !== undefined) size[k] = Number(e[k]); });
+        return { kind: e.kind, approx_size: size, location_hint: orNull(e.locationHint),
+                 matches_scene_id: orNull(e.matchesSceneId), confidence: Number(e.confidence) || 0.8,
+                 evidence: orNull(e.evidence) };
+      }),
+      scale_refs: p.scaleRefs.map(r => ({ kind: r.kind, value: Number(r.value) || 0, unit: r.unit || "m",
+                                         confidence: Number(r.confidence) || 0.8, evidence: orNull(r.evidence) })),
+    },
+  }));
+}
+
+/* Mirror of the pydantic rules in dataset/schema.py + dataset/consent.py. */
+function validateForExport(record) {
+  const problems = [];
+  if (!/^karmi-[a-z0-9][a-z0-9-]*$/.test(record.record_id)) problems.push("record id must match karmi-<lowercase/digits/dashes>");
+  if (!record.consent.grants.length) problems.push("at least one consent grant is required");
+  record.consent.grants.forEach((g, i) => {
+    if (!g.roles.length) problems.push("grant " + (i + 1) + ": at least one role");
+    if (!g.scope.licence_scope.length) problems.push("grant " + (i + 1) + ": at least one licence in scope");
+  });
+  if (record.consent.withdrawn && !record.consent.withdrawal_reason) problems.push("withdrawn consent needs a reason");
+  if (record.licence.id === "other" && !record.licence.terms_note) problems.push("licence 'other' needs a terms note");
+  if (record.release_tier === "public" && !record.consent.withdrawn) {
+    record.consent.grants.forEach((g, i) => {
+      if (!g.scope.dataset_release) problems.push("grant " + (i + 1) + ": public tier needs dataset_release=true");
+      if (!g.scope.licence_scope.includes(record.licence.id)) problems.push("grant " + (i + 1) + ": licence scope does not include " + record.licence.id);
+    });
+  }
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(record.annotator.annotator_id)) problems.push("annotator id must be lowercase id-like");
+  record.drawing.scene.walls.forEach(w => {
+    if (w.start[0] === w.end[0] && w.start[1] === w.end[1]) problems.push("wall " + w.id + " has zero length");
+  });
+  record.photos.forEach((p, i) => {
+    if (!p.file || p.file.startsWith("/") || p.file.includes("..")) problems.push("photo " + (i + 1) + ": file must be a relative opaque name");
+  });
+  return problems;
+}
+
+function download(name, text) {
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function exportRecord() {
+  const record = buildRecord();
+  const problems = validateForExport(record);
+  if (problems.length) {
+    status("NOT exported — fix these first: " + problems.join(" · "));
+    alert("Cannot export:\n- " + problems.join("\n- "));
+    return null;
+  }
+  const text = JSON.stringify(record, null, 2);
+  $("exportOut").value = text;
+  download(record.record_id + ".json", text);
+  status("Record exported: " + record.record_id + ".json — review it against the consent form before release.");
+  return text;
+}
+
+function exportSidecars() {
+  const sidecars = buildSidecars();
+  if (!sidecars.length) { status("No photos to export."); return []; }
+  const combined = sidecars.map(s => "// " + s.name + "\n" + JSON.stringify(s.json, null, 2)).join("\n\n");
+  $("exportOut").value = combined;
+  sidecars.forEach(s => download(s.name, JSON.stringify(s.json, null, 2)));
+  status(sidecars.length + " sidecar file(s) exported (photo.jpg.json format — drop next to the photo).");
+  return sidecars;
+}
+
+$("exportRecord").addEventListener("click", exportRecord);
+$("exportSidecars").addEventListener("click", exportSidecars);
+$("validateBtn").addEventListener("click", () => {
+  const problems = validateForExport(buildRecord());
+  status(problems.length ? "Validation: " + problems.join(" · ") : "Validation: OK — the record satisfies the consent/licence rules.");
+});
+
+/* ------------------------- synthetic demo ---------------------------- */
+function loadDemo() {
+  // Draw a small synthetic plan so the tool can be tried with no files at all.
+  const off = document.createElement("canvas");
+  off.width = 720; off.height = 480;
+  const c = off.getContext("2d");
+  c.fillStyle = "#fff"; c.fillRect(0, 0, off.width, off.height);
+  c.strokeStyle = "#111"; c.lineWidth = 3;
+  c.strokeRect(80, 80, 560, 320);                 // outer envelope
+  c.beginPath(); c.moveTo(360, 80); c.lineTo(360, 400); c.stroke();     // spine wall
+  c.beginPath(); c.moveTo(80, 240); c.lineTo(360, 240); c.stroke();     // divider (left)
+  c.beginPath(); c.moveTo(360, 300); c.lineTo(640, 300); c.stroke();    // divider (right)
+  c.font = "16px system-ui"; c.fillStyle = "#111";
+  c.fillText("BEDROOM 1", 150, 170);
+  c.fillText("LIVING", 440, 180);
+  c.fillText("KITCHEN", 440, 350);
+  c.font = "12px system-ui";
+  c.fillText("SCALE 1:100 — SYNTHETIC DEMO DRAWING", 80, 440);
+  const img = new Image();
+  img.onload = () => { state.drawing.image = img; canvas.width = off.width; canvas.height = off.height; redraw(); };
+  img.src = off.toDataURL("image/png");
+  state.drawing.fileName = "demo-plan.png";
+
+  const mpp = 0.025;
+  state.drawing.mPerPx = mpp; $("mpp").value = mpp;
+  state.drawing.walls = [
+    { id: "W1", start: [80, 80], end: [640, 80], thickness: 0.23, isExternal: true, confidence: 0.95 },
+    { id: "W2", start: [640, 80], end: [640, 400], thickness: 0.23, isExternal: true, confidence: 0.95 },
+    { id: "W3", start: [80, 400], end: [640, 400], thickness: 0.23, isExternal: true, confidence: 0.95 },
+    { id: "W4", start: [80, 80], end: [80, 400], thickness: 0.23, isExternal: true, confidence: 0.95 },
+  ];
+  state.drawing.openings = [
+    { id: "O1", kind: "window", wallId: "W1", start: [200, 80], end: [260, 80], widthPx: 60, height: null, sillHeight: null, confidence: 0.9 },
+    { id: "O2", kind: "door", wallId: "W4", start: [80, 300], end: [80, 336], widthPx: 36, height: null, sillHeight: null, confidence: 0.9 },
+  ];
+  state.drawing.rooms = [
+    { id: "R1", name: "BEDROOM 1", nameNp: "शयनकक्ष", polygon: [[80, 80], [360, 80], [360, 240], [80, 240]] },
+    { id: "R2", name: "LIVING", nameNp: "बैठक", polygon: [[360, 80], [640, 80], [640, 300], [360, 300]] },
+  ];
+  state.drawing.dimensions = [{ id: "D1", value: 14.0, unit: "m", label: "14.0 m (demo)" }];
+  state.drawing.nextId = { W: 5, O: 3, R: 3, D: 2 };
+
+  state.record.recordId = "karmi-demo-0001";
+  state.record.synthetic = true; $("synBadge").hidden = false; $("synthetic").checked = true;
+  state.record.sourceKind = "vector_pdf"; $("sourceKind").value = "vector_pdf";
+  state.record.municipality = "Kathmandu Metropolitan City"; $("municipality").value = state.record.municipality;
+  state.record.district = "Kathmandu"; $("district").value = state.record.district;
+  state.record.licence = "cc-by-4.0"; $("licence").value = "cc-by-4.0";
+  state.record.attribution = "Karmi synthetic demo"; $("attribution").value = state.record.attribution;
+  state.record.pageFiles = "drawing/page-01.png"; $("pageFiles").value = state.record.pageFiles;
+  state.record.notes = "SYNTHETIC DEMO — no real building or person involved.";
+  $("recordNotes").value = state.record.notes;
+  state.record.grants = [{
+    roles: ["homeowner", "photographer"], method: "written_form", grantedAt: "2026-06-01",
+    licences: ["cc-by-4.0"], datasetRelease: true, modelTraining: true, restrictions: "",
+    signatoryId: "form-demo-0001", evidence: "synthetic demo — no real form", guardian: false,
+  }];
+  renderGrants();
+  state.photos = [{
+    file: "photos/p01-front.jpg", view: "front", stage: "walls",
+    takenAt: "2026-06-08T10:30:00+05:45", notes: "synthetic demo photo annotation", redacted: true,
+    elements: [{ kind: "wall", length: 14.0, width: "", height: 2.7, thickness: 0.23,
+                 locationHint: "front facade", matchesSceneId: "W3", confidence: 0.85, evidence: "demo measurement" }],
+    scaleRefs: [{ kind: "door_height", value: 2.05, unit: "m", confidence: 0.9, evidence: "demo main door height" }],
+  }];
+  renderPhotos(); renderLists(); redraw();
+  status("Synthetic demo loaded — inspect the export buttons, or export and validate the JSON.");
+  return true;
+}
+$("demoBtn").addEventListener("click", loadDemo);
+
+/* ----------------------------- init ---------------------------------- */
+renderGrants(); renderPhotos(); renderLists(); redraw();
+status("Ready. Load a drawing image or press “Load synthetic demo”. Nothing leaves this browser.");
+
+/* Test/demo hooks (also used by the verification script). */
+window.KARMI = { state, buildRecord, buildSidecars, buildRecordJSON: () => JSON.stringify(buildRecord(), null, 2),
+                 exportRecord, exportSidecars, validateForExport, loadDemo, redraw };
+</script>
+</body>
+</html>
