@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Karmi — How It Works (3D)</title>
+<style>
+@page{size:A4;margin:15mm}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;color:#20242b;line-height:1.5;font-size:10.5pt;
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Noto Sans Devanagari','Mangal',sans-serif;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{max-width:180mm;margin:0 auto;padding:10mm 0}
+h1{font-size:20pt;margin:0 0 2pt}
+.sub{color:#6b7280;font-size:11pt;margin:0 0 12pt}
+.cap{font-size:9pt;color:#6b7280;margin:4pt 0 0;text-align:center}
+.step{background:#f4f8f5;border:1px solid #d7e6dc;border-radius:7pt;padding:7pt 11pt;margin:0 0 8pt;page-break-inside:avoid}
+.step b{color:#2f6b4f}
+.step p{margin:2pt 0 0;font-size:9.5pt}
+.legend{display:flex;gap:8pt;flex-wrap:wrap;margin:6pt 0 0;font-size:8.5pt}
+.legend span{display:inline-flex;align-items:center;gap:4pt}
+.sw{display:inline-block;width:10pt;height:10pt;border-radius:2pt;border:1px solid #0002}
+.note{background:#fff8e6;border:1px solid #ecd9a0;border-radius:7pt;padding:6pt 10pt;font-size:9pt;margin:8pt 0 0}
+</style>
+</head>
+<body>
+<div class="sheet">
+<h1>Karmi — how it works, in 3D</h1>
+<p class="sub">The same three scenes the demo video shows: the approved house builds itself, reality lands on top, and the difference is highlighted.</p>
+
+<!-- SCENE 1 -->
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:180mm;height:auto;display:block">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#2f6b4f">1 · The approved house builds itself (from the naksa)</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">floor plan → walls extrude upward → a 3D house only the drawing could describe</text>
+  <!-- isometric house: base 200x140, wall height 62 -->
+  <g stroke="#2f6b4f" stroke-width="2" fill="#e8f2ec" fill-opacity="0.9">
+    <!-- front wall -->
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <!-- side wall -->
+    <polygon points="330,196 450,156 450,94 330,134"/>
+    <!-- roof hint (flat slab) -->
+    <polygon points="90,134 330,134 450,94 210,94"/>
+  </g>
+  <!-- door + window on front -->
+  <rect x="120" y="152" width="26" height="44" fill="#ffffff" stroke="#2f6b4f"/>
+  <rect x="200" y="146" width="48" height="30" fill="#ffffff" stroke="#2f6b4f"/>
+  <rect x="272" y="146" width="34" height="30" fill="#ffffff" stroke="#2f6b4f"/>
+  <!-- window on side wall (parallelogram) -->
+  <polygon points="352,152 412,132 412,110 352,130" fill="#ffffff" stroke="#2f6b4f"/>
+  <!-- floor plan ghost under house -->
+  <g transform="translate(470,60)" stroke="#9db8a8" fill="none" stroke-width="1.5">
+    <rect x="0" y="0" width="240" height="170" stroke-dasharray="4 3"/>
+    <line x1="150" y1="0" x2="150" y2="170"/>
+    <line x1="0" y1="105" x2="150" y2="105"/>
+    <line x1="150" y1="135" x2="240" y2="135"/>
+    <text x="8" y="18" font-size="9" fill="#5a7a68" stroke="none">BEDROOM 2</text>
+    <text x="8" y="122" font-size="9" fill="#5a7a68" stroke="none">BEDROOM 1</text>
+    <text x="158" y="18" font-size="9" fill="#5a7a68" stroke="none">LIVING</text>
+    <text x="158" y="60" font-size="9" fill="#5a7a68" stroke="none">KITCHEN</text>
+    <text x="158" y="128" font-size="9" fill="#5a7a68" stroke="none">BATH</text>
+  </g>
+  <text x="470" y="252" font-size="8.5" fill="#8a8f98" stroke="none">the flat naksa the homeowner received — same house, unreadable to most people</text>
+</svg>
+<p class="cap">The naksa becomes structured data (walls, doors, windows, rooms), and the renderer extrudes it — no AI in this step, just the drawing made visible.</p>
+
+<!-- SCENE 2 -->
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:180mm;height:auto;display:block;margin-top:10pt">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#8a5a12">2 · Reality lands on top (from site photos / tape measurements)</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">the as-built model — semi-transparent, drawn over the approved outline</text>
+  <!-- approved ghost -->
+  <g stroke="#2f6b4f" stroke-width="1.5" fill="#e8f2ec" fill-opacity="0.35">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+    <polygon points="90,134 330,134 450,94 210,94"/>
+  </g>
+  <!-- as-built overlay: same shell, one narrower window highlighted -->
+  <g stroke="#8a5a12" stroke-width="2.2" fill="#fdf3e0" fill-opacity="0.75">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+  </g>
+  <!-- approved window ghost (1.5 m) vs as-built (1.0 m) -->
+  <rect x="200" y="146" width="48" height="30" fill="none" stroke="#2f6b4f" stroke-dasharray="3 2"/>
+  <rect x="204" y="146" width="40" height="30" fill="#ffffff" stroke="#8a5a12" stroke-width="2"/>
+  <text x="196" y="214" font-size="8.5" fill="#2f6b4f" stroke="none">approved: 1.5 m</text>
+  <text x="196" y="226" font-size="8.5" fill="#8a5a12" stroke="none">measured: 1.0 m (tape)</text>
+  <!-- camera + photo icons floating -->
+  <g transform="translate(560,80)">
+    <rect x="0" y="0" width="66" height="48" rx="6" fill="#ffffff" stroke="#8a8f98"/>
+    <circle cx="33" cy="24" r="12" fill="none" stroke="#8a8f98" stroke-width="2"/>
+    <rect x="24" y="-6" width="18" height="8" rx="2" fill="#8a8f98"/>
+    <text x="0" y="66" font-size="8.5" fill="#8a8f98">site photos in…</text>
+  </g>
+  <g transform="translate(640,60)" font-size="8.5" fill="#40485a">
+    <text x="0" y="10">+ known dimension</text>
+    <text x="0" y="22">(door height 2.1 m)</text>
+    <text x="0" y="34">+ tape measurements</text>
+    <text x="0" y="46">sidecar (optional)</text>
+  </g>
+</svg>
+<p class="cap">Photos and hand-entered measurements become an "as-built" model — every value carries its confidence and its source.</p>
+
+<!-- SCENE 3 -->
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:180mm;height:auto;display:block;margin-top:10pt">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#a12b2b">3 · The difference, highlighted and explained</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">what matches stays calm; what differs turns red and lands on the verify list</text>
+  <!-- house shell greyed -->
+  <g stroke="#9aa0a8" stroke-width="1.8" fill="#f2f1ee" fill-opacity="0.8">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+  </g>
+  <!-- MATCHED window green -->
+  <rect x="120" y="152" width="26" height="44" fill="#dff0d8" stroke="#3c6e1f" stroke-width="2"/>
+  <!-- DIFFERS window red: approved outline ghost + smaller as-built -->
+  <rect x="200" y="146" width="48" height="30" fill="none" stroke="#a12b2b" stroke-dasharray="3 2" stroke-width="1.5"/>
+  <rect x="204" y="146" width="40" height="30" fill="#fdeaea" stroke="#a12b2b" stroke-width="2.4"/>
+  <!-- callout -->
+  <g>
+    <line x1="248" y1="146" x2="330" y2="76" stroke="#a12b2b" stroke-width="1"/>
+    <circle cx="248" cy="146" r="3" fill="#a12b2b"/>
+    <rect x="332" y="52" width="252" height="52" rx="6" fill="#fdeaea" stroke="#a12b2b"/>
+    <text x="342" y="70" font-size="9.5" font-weight="700" fill="#a12b2b">window, front wall — HIGH</text>
+    <text x="342" y="84" font-size="9" fill="#40485a">drawing: 1.50 m · site: 1.00 m (33%)</text>
+    <text x="342" y="97" font-size="8.5" fill="#6b7280">confidence 75% · please verify with your engineer</text>
+  </g>
+  <!-- verify list card -->
+  <g transform="translate(500,118)">
+    <rect x="0" y="0" width="252" height="96" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+    <text x="10" y="18" font-size="9.5" font-weight="700" fill="#2f6b4f">जाँच गर्नुपर्ने बुँदाहरू — items to verify</text>
+    <text x="10" y="36" font-size="9" fill="#40485a">1. window width — drawing 1.5 m, site 1.0 m</text>
+    <text x="10" y="52" font-size="9" fill="#40485a">2. walls W2…W6 — not in the photos,</text>
+    <text x="24" y="65" font-size="9" fill="#40485a">could not be checked (not "missing")</text>
+    <text x="10" y="83" font-size="8.5" fill="#6b7280">Karmi never says "violation" — only "please verify"</text>
+  </g>
+  <g class="legend">
+    <span><span class="sw" style="background:#dff0d8;border-color:#3c6e1f"></span> matched</span>
+    <span><span class="sw" style="background:#fdeaea;border-color:#a12b2b"></span> differs — verify</span>
+    <span><span class="sw" style="background:#f2f1ee;border-color:#9aa0a8"></span> could not be checked</span>
+  </g>
+</svg>
+<p class="cap">In the real app this is an animation: the plan extrudes upward, the as-built overlays it, and you can orbit the model. Every element is clickable, showing expected vs observed with confidence.</p>
+
+<div class="note"><b>Why 3D:</b> a homeowner who cannot read a plan can still see a narrower window
+when the approved outline is ghosted next to the built one. The visual is the explanation —
+the Nepali checklist underneath tells them what to do about it.</div>
+</div>
+</body>
+</html>

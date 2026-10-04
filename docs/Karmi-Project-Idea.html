@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Karmi — Project Idea</title>
+<style>
+@page{size:A4;margin:20mm 18mm}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;color:#20242b;line-height:1.62;font-size:11.5pt;
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Noto Sans Devanagari','Mangal',sans-serif;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{max-width:174mm;margin:0 auto;padding:14mm 0}
+h1{font-size:26pt;margin:0 0 2pt;line-height:1.15}
+.sub{color:#6b7280;font-size:12.5pt;margin:0 0 4pt}
+.meta{color:#8a8f98;font-size:9.5pt;margin:0 0 18pt}
+h2{font-size:14.5pt;margin:22pt 0 6pt;padding-bottom:3pt;border-bottom:2px solid #2f6b4f}
+h3{font-size:11.5pt;margin:12pt 0 4pt}
+p{margin:0 0 8pt;text-align:justify;orphans:2;widows:2}
+.lead{font-size:12.5pt;line-height:1.55;color:#2c313a}
+ol,ul{margin:2pt 0 8pt;padding-left:18pt}
+li{margin-bottom:3pt}
+.card{background:#f4f8f5;border:1px solid #d7e6dc;border-radius:8pt;padding:10pt 14pt;margin:10pt 0;page-break-inside:avoid}
+.card b{color:#2f6b4f}
+.tag{display:inline-block;background:#eef4f0;border:1px solid #cfe0d5;color:#2f6b4f;border-radius:999px;padding:1pt 9pt;font-size:8.5pt;margin:1pt 2pt 1pt 0}
+table{width:100%;border-collapse:collapse;font-size:10pt;margin:6pt 0 10pt}
+th{background:#eef2ee;text-align:left;padding:5pt 7pt;font-size:9.5pt;border-bottom:1px solid #d9d9d9}
+td{padding:5pt 7pt;border-bottom:1px solid #ececec;vertical-align:top}
+.grid{display:flex;gap:10pt;margin:8pt 0}
+.grid>div{flex:1;background:#fafaf8;border:1px solid #e5e3dc;border-radius:8pt;padding:8pt 11pt}
+.grid h3{margin:0 0 3pt;font-size:10.5pt;color:#2f6b4f}
+.grid p{font-size:9.5pt;margin:0;text-align:left}
+.steps{counter-reset:s;list-style:none;padding:0;margin:8pt 0}
+.steps li{counter-increment:s;position:relative;padding-left:26pt;margin-bottom:7pt;page-break-inside:avoid}
+.steps li:before{content:counter(s);position:absolute;left:0;top:1pt;width:17pt;height:17pt;
+  background:#2f6b4f;color:#fff;border-radius:50%;font-size:9.5pt;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.note{background:#fff8e6;border:1px solid #ecd9a0;border-radius:8pt;padding:8pt 12pt;font-size:10pt;margin:8pt 0}
+.np{font-weight:600}
+footer{margin-top:20pt;padding-top:8pt;border-top:1px solid #e3e0d8;color:#8a8f98;font-size:8.5pt}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<h1>Karmi (कर्मी)</h1>
+<p class="sub">A compiler between approved architectural design and built reality — for Nepal's housing.</p>
+<p class="meta">Team Amgain — Prabesh Amgain · Prabhat Amgain &nbsp;|&nbsp; Frogtoberfest 2026 (Leapfrog Technology) &nbsp;|&nbsp; Open source, MIT licence</p>
+
+<h2>The problem</h2>
+<p class="lead">In Nepal you cannot legally build a house without a <b>Naksa Pass</b>: drawings signed by a
+registered engineer, checked against the National Building Code, approved by your municipality.
+Then construction drifts. The window comes out 3 feet instead of 5. The stair is narrower. The
+setback shrinks. Nobody re-measures — and the homeowner cannot read the drawings they paid for.</p>
+<p>Deviations from the approved design are how unsafe buildings get built — in one of the most
+seismically exposed countries on earth. The completion certificate (<span class="np">सम्पूर्ण प्रमाण पत्र</span>)
+is supposed to require conformance, but there is no practical way to verify it.</p>
+
+<h2>The idea in one sentence</h2>
+<div class="card"><b>Upload your approved naksa and a few site photos — Karmi compares the two and
+hands you a plain-Nepali checklist of what to verify</b>, with a 3D view that shows the approved
+house and the built one, differences highlighted.</div>
+
+<h2>How it works</h2>
+<ol class="steps">
+<li><b>Approved drawing in.</b> The naksa PDF is parsed into a machine-readable model: walls with
+thickness, doors and windows, room polygons, dimensions, orientation.</li>
+<li><b>Reality in.</b> Site photos (or tape measurements entered on the phone) become an
+"as-built" model: construction stage, visible elements, approximate sizes — each with a
+confidence value.</li>
+<li><b>Compile the difference.</b> A deterministic comparison engine matches every drawn element
+to the site evidence — respecting which wall it is on and where along it — and scores the
+difference by severity.</li>
+<li><b>Explain it.</b> The output is a bilingual report: a numbered checklist in Nepali, an honest
+"what Karmi could not determine" section, and a 2D→3D view where the approved house builds
+itself and the as-built appears with differences in red.</li>
+</ol>
+
+<div style="page-break-before:always"></div>
+<h2 style="margin-top:0">How it works, in 3D</h2>
+<p style="color:#6b7280;font-size:10pt;margin-bottom:8pt">The same three scenes the demo video shows: the approved house builds itself, reality lands on top, and the difference is highlighted.</p>
+
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:174mm;height:auto;display:block">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#2f6b4f">1 · The approved house builds itself (from the naksa)</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">floor plan → walls extrude upward → a 3D house only the drawing could describe</text>
+  <g stroke="#2f6b4f" stroke-width="2" fill="#e8f2ec" fill-opacity="0.9">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+    <polygon points="90,134 330,134 450,94 210,94"/>
+  </g>
+  <rect x="120" y="152" width="26" height="44" fill="#ffffff" stroke="#2f6b4f"/>
+  <rect x="200" y="146" width="48" height="30" fill="#ffffff" stroke="#2f6b4f"/>
+  <rect x="272" y="146" width="34" height="30" fill="#ffffff" stroke="#2f6b4f"/>
+  <polygon points="352,152 412,132 412,110 352,130" fill="#ffffff" stroke="#2f6b4f"/>
+  <g transform="translate(470,60)" stroke="#9db8a8" fill="none" stroke-width="1.5">
+    <rect x="0" y="0" width="240" height="170" stroke-dasharray="4 3"/>
+    <line x1="150" y1="0" x2="150" y2="170"/>
+    <line x1="0" y1="105" x2="150" y2="105"/>
+    <line x1="150" y1="135" x2="240" y2="135"/>
+    <text x="8" y="18" font-size="9" fill="#5a7a68" stroke="none">BEDROOM 2</text>
+    <text x="8" y="122" font-size="9" fill="#5a7a68" stroke="none">BEDROOM 1</text>
+    <text x="158" y="18" font-size="9" fill="#5a7a68" stroke="none">LIVING</text>
+    <text x="158" y="60" font-size="9" fill="#5a7a68" stroke="none">KITCHEN</text>
+    <text x="158" y="128" font-size="9" fill="#5a7a68" stroke="none">BATH</text>
+  </g>
+  <text x="470" y="252" font-size="8.5" fill="#8a8f98" stroke="none">the flat naksa the homeowner received — same house, unreadable to most people</text>
+</svg>
+<p style="font-size:8.5pt;color:#6b7280;margin:3pt 0 10pt;text-align:center">The naksa becomes structured data, and the renderer extrudes it — no AI in this step, just the drawing made visible.</p>
+
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:174mm;height:auto;display:block">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#8a5a12">2 · Reality lands on top (from site photos / tape measurements)</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">the as-built model — semi-transparent, drawn over the approved outline</text>
+  <g stroke="#2f6b4f" stroke-width="1.5" fill="#e8f2ec" fill-opacity="0.35">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+    <polygon points="90,134 330,134 450,94 210,94"/>
+  </g>
+  <g stroke="#8a5a12" stroke-width="2.2" fill="#fdf3e0" fill-opacity="0.75">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+  </g>
+  <rect x="200" y="146" width="48" height="30" fill="none" stroke="#2f6b4f" stroke-dasharray="3 2"/>
+  <rect x="204" y="146" width="40" height="30" fill="#ffffff" stroke="#8a5a12" stroke-width="2"/>
+  <text x="196" y="214" font-size="8.5" fill="#2f6b4f" stroke="none">approved: 1.5 m</text>
+  <text x="196" y="226" font-size="8.5" fill="#8a5a12" stroke="none">measured: 1.0 m (tape)</text>
+  <g transform="translate(560,80)">
+    <rect x="0" y="0" width="66" height="48" rx="6" fill="#ffffff" stroke="#8a8f98"/>
+    <circle cx="33" cy="24" r="12" fill="none" stroke="#8a8f98" stroke-width="2"/>
+    <rect x="24" y="-6" width="18" height="8" rx="2" fill="#8a8f98"/>
+    <text x="0" y="66" font-size="8.5" fill="#8a8f98">site photos in…</text>
+  </g>
+  <g transform="translate(640,60)" font-size="8.5" fill="#40485a">
+    <text x="0" y="10">+ known dimension</text>
+    <text x="0" y="22">(door height 2.1 m)</text>
+    <text x="0" y="34">+ tape measurements</text>
+    <text x="0" y="46">sidecar (optional)</text>
+  </g>
+</svg>
+<p style="font-size:8.5pt;color:#6b7280;margin:3pt 0 10pt;text-align:center">Photos and hand-entered measurements become an "as-built" model — every value carries its confidence and its source.</p>
+
+<svg viewBox="0 0 760 236" width="760" height="236" style="width:174mm;height:auto;display:block">
+  <text x="0" y="14" font-size="12.5" font-weight="700" fill="#a12b2b">3 · The difference, highlighted and explained</text>
+  <text x="0" y="30" font-size="9" fill="#6b7280">what matches stays calm; what differs turns red and lands on the verify list</text>
+  <g stroke="#9aa0a8" stroke-width="1.8" fill="#f2f1ee" fill-opacity="0.8">
+    <polygon points="90,196 330,196 330,134 90,134"/>
+    <polygon points="330,196 450,156 450,94 330,134"/>
+  </g>
+  <rect x="120" y="152" width="26" height="44" fill="#dff0d8" stroke="#3c6e1f" stroke-width="2"/>
+  <rect x="200" y="146" width="48" height="30" fill="none" stroke="#a12b2b" stroke-dasharray="3 2" stroke-width="1.5"/>
+  <rect x="204" y="146" width="40" height="30" fill="#fdeaea" stroke="#a12b2b" stroke-width="2.4"/>
+  <g>
+    <line x1="248" y1="146" x2="330" y2="76" stroke="#a12b2b" stroke-width="1"/>
+    <circle cx="248" cy="146" r="3" fill="#a12b2b"/>
+    <rect x="332" y="52" width="252" height="52" rx="6" fill="#fdeaea" stroke="#a12b2b"/>
+    <text x="342" y="70" font-size="9.5" font-weight="700" fill="#a12b2b">window, front wall — HIGH</text>
+    <text x="342" y="84" font-size="9" fill="#40485a">drawing: 1.50 m · site: 1.00 m (33%)</text>
+    <text x="342" y="97" font-size="8.5" fill="#6b7280">confidence 75% · please verify with your engineer</text>
+  </g>
+  <g transform="translate(500,118)">
+    <rect x="0" y="0" width="252" height="96" rx="6" fill="#ffffff" stroke="#d9d9d9"/>
+    <text x="10" y="18" font-size="9.5" font-weight="700" fill="#2f6b4f">जाँच गर्नुपर्ने बुँदाहरू — items to verify</text>
+    <text x="10" y="36" font-size="9" fill="#40485a">1. window width — drawing 1.5 m, site 1.0 m</text>
+    <text x="10" y="52" font-size="9" fill="#40485a">2. walls W2…W6 — not in the photos,</text>
+    <text x="24" y="65" font-size="9" fill="#40485a">could not be checked (not "missing")</text>
+    <text x="10" y="83" font-size="8.5" fill="#6b7280">Karmi never says "violation" — only "please verify"</text>
+  </g>
+  <g style="display:flex;gap:8pt;flex-wrap:wrap;margin:6pt 0 0;font-size:8.5pt">
+    <text x="90" y="252" font-size="8.5" fill="#40485a" stroke="none">■ matched</text>
+    <text x="180" y="252" font-size="8.5" fill="#a12b2b" stroke="none">■ differs — verify</text>
+    <text x="290" y="252" font-size="8.5" fill="#9aa0a8" stroke="none">■ could not be checked</text>
+  </g>
+</svg>
+<p style="font-size:8.5pt;color:#6b7280;margin:3pt 0 0;text-align:center">In the real app this is an animation: the plan extrudes upward, the as-built overlays it, and you can orbit the model. Every element is clickable.</p>
+
+<h2>What makes it different</h2>
+<div class="grid">
+<div><h3>Honest by design</h3><p>Every number carries its confidence and its source. If the photos only cover one facade, the report says "could not be checked" — it never claims a wall is missing.</p></div>
+<div><h3>Never an accusation</h3><p>Karmi has no word for "violation". Every finding is phrased as something to verify with your engineer or municipality — (<span class="np">कृपया जाँच गर्नुहोस्</span>).</p></div>
+<div><h3>AI that does real work</h3><p>AI extracts the drawing and the photos into structured data that code consumes. Delete the AI and the product stops — it is not a chatbot bolted onto a form.</p></div>
+</div>
+
+<h2>Technology</h2>
+<ul>
+<li><b>Fully offline and free to run</b> — no GPU, no API key, no internet needed for the core pipeline.</li>
+<li><b>Open-weight AI only</b> (Qwen, Llama, DeepSeek families, via Ollama or any open-weight endpoint) — closed models are refused in code.</li>
+<li><b>Deterministic core:</b> geometry, matching and severity are ordinary code; the AI never computes a number, and any AI-written narration is validated against the computed figures.</li>
+<li>Vector-PDF parser (pymupdf), raster fallback (Otsu + run-length extraction), FastAPI web UI, three.js 2D→3D viewer, 77 automated tests.</li>
+</ul>
+
+<h2>Open-source contribution</h2>
+<p>Karmi's public good is bigger than the app: the <b>first annotated dataset of Nepali naksa
+drawings paired with construction photos</b> — consent-based (Privacy Act 2075), de-identified,
+licence-cleared (Copyright Act 2059) — plus the conformance engine and the visualisation, all
+MIT-licensed so others can build on them.</p>
+
+<div style="page-break-before:always"></div>
+<h2 style="margin-top:0">Status</h2>
+<table>
+<tr><th>Component</th><th>State</th></tr>
+<tr><td>Full pipeline (drawing → model → comparison → Nepali report)</td><td>Working, verified end-to-end</td></tr>
+<tr><td>Web UI + 3D approved-vs-built viewer</td><td>Working, verified in a real browser</td></tr>
+<tr><td>Test suite &amp; quality gate</td><td>77 tests passing; 7/7 gate checks</td></tr>
+<tr><td>Demo run on the sample plan</td><td>Window: drawn 1.50 m, measured 1.00 m → high severity, 33% — plus 19 items honestly marked "not covered by the photos"</td></tr>
+<tr><td>Live AI model run / real dataset records</td><td>Planned — the pipeline runs without them by design</td></tr>
+</table>
+
+<div class="card" style="margin-top:14pt"><b>The one-line pitch:</b> a homeowner uploads the drawing they paid for and a
+few photos of their build — Karmi shows them, in Nepali and in 3D, what matches, what differs,
+and exactly what to check with their engineer. <span class="np">स्वीकृत नक्सा र बनेको घर बीचको फरक — सजिलो नेपालीमा।</span></div>
+
+<footer>Karmi · Frogtoberfest 2026 · team Amgain · local-first, open-weight, open-source · repository: github.com/amgainprabesh/karmi</footer>
+</div>
+</body>
+</html>
