@@ -32,7 +32,8 @@ python -m pytest -q
 ```
 
 Nothing above needs a model, a GPU, an API key or a network connection. The AI layer is
-optional and injected — see `AI_USAGE.md`.
+optional and injected — see `AI_USAGE.md`. The offline and open-weight guarantees are
+verified with reproducible commands in [`docs/OFFLINE.md`](docs/OFFLINE.md).
 
 ## The problem
 
