@@ -968,25 +968,33 @@ def diff_scene(
         used_obs.add(idx)
         pairs.append((t, obj, oe))
 
-    # ---- 1b. geometric matching (scene element by scene element) -------- #
-    for t, obj in scene_items:
-        skey = f"{t}:{obj.id}"
-        if skey in used_scene:
+    # ---- 1b. geometric matching ------------------------------------------ #
+    # Global best-first assignment. Collect every viable candidate pair, sort by
+    # relative difference, then assign greedily. The obvious alternative — walking the
+    # scene element by element and taking each one's best remaining partner — is
+    # order-dependent and gets the wrong answer: a 1.5 m observed window can be paired
+    # with a 1.2 m drawn window (25% off) while the 1.5 m drawn window further along
+    # the same wall is left unmatched, turning a perfect match into a false finding.
+    candidates: list[tuple[float, int, int]] = []  # (rel, scene_index, observed_index)
+    for si, (t, obj) in enumerate(scene_items):
+        if f"{t}:{obj.id}" in used_scene:
             continue
-        best_idx: int | None = None
-        best_rel: float | None = None
         for idx, oe in enumerate(obs_items):
             if idx in used_obs:
                 continue
             rel = _candidate_rel(t, obj, oe)
-            if rel is None:
-                continue
-            if best_rel is None or rel < best_rel:
-                best_idx, best_rel = idx, rel
-        if best_idx is not None:
-            used_scene.add(skey)
-            used_obs.add(best_idx)
-            pairs.append((t, obj, obs_items[best_idx]))
+            if rel is not None:
+                candidates.append((rel, si, idx))
+    candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+
+    for _rel, si, idx in candidates:
+        t, obj = scene_items[si]
+        skey = f"{t}:{obj.id}"
+        if skey in used_scene or idx in used_obs:
+            continue
+        used_scene.add(skey)
+        used_obs.add(idx)
+        pairs.append((t, obj, obs_items[idx]))
 
     pairs.sort(key=lambda p: rank.get(f"{p[0]}:{p[1].id}", 1_000_000))
 

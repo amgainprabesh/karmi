@@ -1,9 +1,10 @@
 {
   "photo": "front_walls_stage.jpg",
+  "synthetic": true,
   "taken_at": "2026-06-08T10:30:00+05:45",
   "view": "front",
   "stage": "walls",
-  "notes": "Hand-measured at site on 2026-06-08 with a 5 m steel tape. Entered by the homeowner; used as the reference measurement set for the front elevation.",
+  "notes": "DEMO MEASUREMENT SET — synthetic, not a real site. Demonstrates the sidecar format: the homeowner (or their engineer) measures a few things with a tape and writes them here, so Karmi has real numbers even when no AI model is configured. 'matches_scene_id' names the element in the approved drawing that was measured; it is optional, and when present it overrides geometric guessing.",
   "scale_refs": [
     {
       "kind": "door_height",
@@ -16,6 +17,7 @@
   "elements": [
     {
       "kind": "wall",
+      "matches_scene_id": "W7",
       "approx_size": { "length": 9.8, "height": 2.7, "thickness": 0.23 },
       "location_hint": "front (south) facade, full width",
       "confidence": 0.85,
@@ -23,10 +25,11 @@
     },
     {
       "kind": "opening",
-      "approx_size": { "width": 1.5, "height": 1.2 },
+      "matches_scene_id": "O8",
+      "approx_size": { "width": 1.0, "height": 1.2 },
       "location_hint": "front facade, left of centre",
       "confidence": 0.8,
-      "evidence": "window gap 1.50 m x 1.20 m, sill about 0.90 m"
+      "evidence": "window opening measured 1.00 m wide x 1.20 m high (sill about 0.90 m) — narrower than the drawing"
     }
   ]
 }

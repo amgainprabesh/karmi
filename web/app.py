@@ -755,6 +755,28 @@ def viewer_data(run_id: str) -> Response:
     return FileResponse(p, media_type="application/json")
 
 
+@app.get("/viewer/{run_id}/vendor/{name}")
+def viewer_vendor(run_id: str, name: str) -> Response:
+    """Serve render/vendor/* inside the viewer's URL space.
+
+    The viewer loads three.js as `./vendor/three.module.js`, which resolves to
+    /viewer/<run_id>/vendor/... — without this route that request 404s and the page
+    silently falls back to a CDN, so "offline 3D" would only work with a network.
+    """
+    safe = _safe_filename(name, "")
+    if not safe or not safe.endswith(".js"):
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Not found."})
+    base = (VIEWER_FILE.parent / "vendor").resolve()
+    target = (base / safe).resolve()
+    try:
+        target.relative_to(base)  # refuse anything escaping render/vendor/
+    except ValueError:
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Not found."})
+    if not target.is_file():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Not found."})
+    return FileResponse(target, media_type="text/javascript")
+
+
 @app.get("/viewer/{run_id}", response_class=HTMLResponse)
 @app.get("/viewer/{run_id}/", response_class=HTMLResponse)
 def viewer(run_id: str) -> HTMLResponse:
