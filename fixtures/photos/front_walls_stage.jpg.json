@@ -1,0 +1,32 @@
+{
+  "photo": "front_walls_stage.jpg",
+  "taken_at": "2026-06-08T10:30:00+05:45",
+  "view": "front",
+  "stage": "walls",
+  "notes": "Hand-measured at site on 2026-06-08 with a 5 m steel tape. Entered by the homeowner; used as the reference measurement set for the front elevation.",
+  "scale_refs": [
+    {
+      "kind": "door_height",
+      "value": 2.05,
+      "unit": "m",
+      "confidence": 0.9,
+      "evidence": "main door frame height, tape-measured"
+    }
+  ],
+  "elements": [
+    {
+      "kind": "wall",
+      "approx_size": { "length": 9.8, "height": 2.7, "thickness": 0.23 },
+      "location_hint": "front (south) facade, full width",
+      "confidence": 0.85,
+      "evidence": "tape measure: 9.80 m long, 2.70 m high, 9 in thick"
+    },
+    {
+      "kind": "opening",
+      "approx_size": { "width": 1.5, "height": 1.2 },
+      "location_hint": "front facade, left of centre",
+      "confidence": 0.8,
+      "evidence": "window gap 1.50 m x 1.20 m, sill about 0.90 m"
+    }
+  ]
+}

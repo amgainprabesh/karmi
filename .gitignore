@@ -21,3 +21,16 @@ node_modules/
 .env
 *.key
 credentials.json
+
+# karmi runtime output — run directories contain the user's own drawing and site
+# photos (personal data: names, addresses, faces). Never commit them.
+runs/
+web/runs/
+*.scene.json
+run.json
+uploads.json
+
+# test & tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

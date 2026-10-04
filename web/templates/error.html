@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Karmi — {{ title }}{% endblock %}
+{% block content %}
+<section class="card error-card">
+  <p class="error-code">{{ status_code }}</p>
+  <h1>{{ title }}</h1>
+  <p>{{ message_en }}</p>
+  {% if message_np %}<p class="np" lang="ne">{{ message_np }}</p>{% endif %}
+  <p><a class="btn btn-primary" href="/">Go to the upload page · अपलोड पृष्ठमा जानुहोस्</a></p>
+</section>
+{% endblock %}

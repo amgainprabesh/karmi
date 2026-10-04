@@ -33,12 +33,25 @@
 | # | Component | Role | AI? |
 |---|---|---|---|
 | 1 | `core/ingest` | accept PDF/scan + photos, normalise, store with metadata | no |
-| 2 | `core/model` | drawing → scene graph (walls with thickness, openings classified door/window, room polygons, dimensions, orientation) | **yes** |
-| 3 | `core/observe` | photos → observed state (construction stage, detected elements, approximate dimensions with confidence) | **yes** |
+| 2 | `core/model` | drawing → scene graph (walls with thickness, openings classified door/window, room polygons, dimensions, orientation) | **yes** (optional; vector PDFs are parsed deterministically) |
+| 3 | `core/observe` | photos → observed state (construction stage, detected elements, approximate dimensions with confidence) | **yes** (optional; a hand-measured sidecar is the offline fallback) |
 | 4 | `core/diff` | element-wise comparison, severity scoring, Nepali narration | **yes** (reasoning) + no (geometry) |
 | 5 | `core/report` | Nepali report + verify-list, machine-readable export | no |
-| 6 | `render/transition` | 2D→3D animated transition; dual approved-vs-built view | no |
-| 7 | `dataset/` | annotation tooling + released dataset | no |
+| 6 | `render/adapter` + `render/viewer.html` | 2D↔3D animated transition; dual approved-vs-built view | no |
+| 7 | `web/` | local upload → results UI (FastAPI) | no |
+| 8 | `core/validate` | input validation, PII detection, EXIF stripping | no |
+| 9 | `dataset/` | annotation tooling + released dataset | no |
+
+## Two rules the diff engine is built around
+
+1. **Absence of evidence is not evidence of absence.** If the site photos only cover a
+   small share of the drawn elements (`COVERAGE_SPARSE_RATIO` in `core/diff.py`), an
+   unmatched drawn element is reported as *"could not be checked"* (`UNVERIFIABLE`, low
+   severity) — **not** as *"missing"*. A few photos of one facade must never produce a
+   report claiming seven walls are absent.
+2. **The AI never computes a number.** Geometry, thresholds and severities are ordinary
+   code. A model may only rewrite narration, and the rewrite is rejected if it contains a
+   figure that does not match the computed one.
 
 ## Ingestion strategy, in priority order
 

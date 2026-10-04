@@ -1,0 +1,1 @@
+"""Karmi web UI package — a local FastAPI app. See web/README.md."""

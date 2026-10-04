@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Karmi — run {{ run_id }}{% endblock %}
+{% block content %}
+
+<section class="card run-head">
+  <div class="run-head-top">
+    <div>
+      <h1>Analysis results <span class="en-sub np" lang="ne">विश्लेषणको नतिजा</span></h1>
+      <p class="muted small">Run <code>{{ run_id }}</code>{% if generated_at %} · {{ generated_at }}{% endif %}
+        {% if drawing_name %} · drawing: <code>{{ drawing_name }}</code>{% endif %}</p>
+    </div>
+    <div class="run-actions">
+      {% if has_report_html %}<a class="btn btn-ghost" href="/runs/{{ run_id }}/report.html" target="_blank" rel="noopener">Full report (HTML)</a>{% endif %}
+      {% if has_report_md %}<a class="btn btn-ghost" href="/runs/{{ run_id }}/report.md" target="_blank" rel="noopener">Report (MD)</a>{% endif %}
+      <a class="btn btn-ghost" href="/api/report/{{ run_id }}">Report (JSON)</a>
+    </div>
+  </div>
+  <div class="statement-banner" role="note">
+    <p class="statement-np np" lang="ne">कर्मीले <strong>जाँच गर्नुपर्ने विषयहरू</strong> मात्र देखाउँछ — यसले कहिल्यै <strong>उल्लंघन</strong> भनी घोषणा गर्दैन।</p>
+    <p class="statement-en">Karmi reports <strong>items to verify</strong>. It never declares a <strong>violation</strong>.</p>
+  </div>
+</section>
+
+{% if errors or warnings %}
+<section class="card limits-card" id="limitations">
+  <h2>This run completed with limitations <span class="en-sub np" lang="ne">यो रन सीमिततासहित पूरा भयो</span></h2>
+  <p>Some analysis steps could not run. The results below are still shown, but treat them as incomplete.</p>
+  <ul class="limits-list">
+    {% for w in warnings %}<li><p>{{ w }}</p></li>{% endfor %}
+    {% for e in errors %}<li><p class="small"><code>{{ e }}</code></p></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not report %}
+<section class="card">
+  <h2>No report was produced</h2>
+  <p>The comparison step did not finish for this run, so there is nothing to show yet. The uploaded files are safe under <code>web/runs/{{ run_id }}/inputs/</code> — you can re-run the comparison later.</p>
+</section>
+{% endif %}
+
+<section class="card" id="summary">
+  <h2>Summary <span class="en-sub np" lang="ne">सारांश</span></h2>
+  <div class="cards">
+    <div class="stat sev-high"><span class="stat-num">{{ summary.high }}</span><span class="stat-label">High / उच्च</span></div>
+    <div class="stat sev-medium"><span class="stat-num">{{ summary.medium }}</span><span class="stat-label">Medium / मध्यम</span></div>
+    <div class="stat sev-low"><span class="stat-num">{{ summary.low }}</span><span class="stat-label">Low / न्यून</span></div>
+    <div class="stat sev-info"><span class="stat-num">{{ summary.info }}</span><span class="stat-label">Info / जानकारी</span></div>
+    <div class="stat sev-ok"><span class="stat-num">{{ summary.matched }}</span><span class="stat-label">Matched / मिल्यो</span></div>
+    <div class="stat"><span class="stat-num">{{ summary.total }}</span><span class="stat-label">Compared / तुलना गरिएका</span></div>
+    <div class="stat stat-verify"><span class="stat-num">{{ summary.verify_items }}</span><span class="stat-label">To verify / जाँच्नुपर्ने</span></div>
+  </div>
+  <p class="muted small">Severity is how much a difference <em>could</em> matter — it is a hint for ordering your checks, not a judgement.</p>
+</section>
+
+<section class="card" id="verify-list">
+  <h2>जाँच गर्नुपर्ने विषयहरू <span class="en-sub">Items to verify</span></h2>
+  <p class="muted">Take this numbered list to your engineer, mason or ward office. Nothing here is a violation — it is a list of things worth a second look.</p>
+  {% if verify %}
+  <ol class="verify-list">
+    {% for v in verify %}
+    <li class="verify-item sev-{{ v.sev }}">
+      {% if v.item_np %}
+      <p class="verify-primary np" lang="ne">{{ v.item_np }}</p>
+      <p class="verify-secondary">{{ v.item }}</p>
+      {% else %}
+      <p class="verify-primary">{{ v.item }}</p>
+      {% endif %}
+      {% if v.why %}<p class="verify-why"><span class="meta-tag">Why / किन</span> {{ v.why }}</p>{% endif %}
+      {% if v.how %}<p class="verify-how"><span class="meta-tag">Next step / अर्को कदम</span> {{ v.how }}</p>{% endif %}
+      <p class="verify-meta">
+        <span class="pill sev-{{ v.sev }}">{{ severity_labels[v.sev] }}</span>
+        {% if v.delta_ref %}<span class="muted small">from comparison item <code>{{ v.delta_ref }}</code></span>{% endif %}
+      </p>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="empty-note">Nothing needed your attention in this run — but that is not proof that everything is correct. Photos only show what they show.</p>
+  {% endif %}
+</section>
+
+<section class="card" id="deltas">
+  <h2>Element-by-element comparison <span class="en-sub np" lang="ne">एक-एक भागको तुलना</span></h2>
+  <div class="filter-bar js-only" id="sev-filter" role="group" aria-label="Filter by severity">
+    <button type="button" class="chip active" data-sev-filter="all">All</button>
+    <button type="button" class="chip" data-sev-filter="high">High</button>
+    <button type="button" class="chip" data-sev-filter="medium">Medium</button>
+    <button type="button" class="chip" data-sev-filter="low">Low</button>
+    <button type="button" class="chip" data-sev-filter="info">Info</button>
+  </div>
+  {% if deltas %}
+  <div class="tbl-wrap">
+    <table class="delta-table">
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Status</th>
+          <th>Approved (expected)</th>
+          <th>On site (observed)</th>
+          <th>Severity</th>
+          <th>Confidence &amp; source</th>
+          <th>Why we flag it</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in deltas %}
+        <tr data-sev="{{ d.sev }}">
+          <td data-label="Element"><strong>{{ d.element }}</strong>{% if d.id %}<span class="cell-sub"><code>{{ d.id }}</code></span>{% endif %}</td>
+          <td data-label="Status"><span class="pill status-{{ d.status }}">{{ d.status_label }}</span></td>
+          <td data-label="Approved (expected)">{{ d.expected if d.expected is not none else "—" }}</td>
+          <td data-label="On site (observed)">{{ d.observed if d.observed is not none else "—" }}</td>
+          <td data-label="Severity"><span class="pill sev-{{ d.sev }}">{{ severity_labels[d.sev] }}</span></td>
+          <td data-label="Confidence &amp; source">
+            <span class="conf"><span class="conf-bar"><span class="conf-fill" style="width: {{ d.conf_pct }}%"></span></span> {{ d.conf_pct }}%</span>
+            {% if d.scene_src %}<span class="cell-sub">drawing: {{ d.scene_src }}</span>{% endif %}
+            {% if d.observed_src %}<span class="cell-sub">site: {{ d.observed_src }}</span>{% endif %}
+          </td>
+          <td data-label="Why we flag it">
+            {% if d.reason %}<span>{{ d.reason }}</span>{% endif %}
+            {% if d.reason_np %}<span class="np cell-sub" lang="ne">{{ d.reason_np }}</span>{% endif %}
+            {% if not d.reason and not d.reason_np %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="empty-note js-only" id="delta-empty-filter" hidden>No rows with that severity.</p>
+  {% else %}
+  <p class="empty-note">No differences were flagged in this run. That can mean the visible parts match the drawing — or that there was not enough evidence to compare. Check the limitations above.</p>
+  {% endif %}
+</section>
+
+<section class="card" id="view3d">
+  <h2>Approved vs built — 3D view <span class="en-sub np" lang="ne">स्वीकृत र बनेको — 3D दृश्य</span></h2>
+  {% if viewer_state == "ready" %}
+  <iframe class="viewer-frame" src="/viewer/{{ run_id }}/" title="3D dual view: approved in green, as-built in red" loading="lazy"></iframe>
+  <p class="muted small">Green: the approved model from the drawing. Red: what the photos suggest is actually built. If the view does not load, <a href="/viewer/{{ run_id }}/" target="_blank" rel="noopener">open it in a new tab</a>.</p>
+  {% elif viewer_state == "no_view_data" %}
+  <div class="placeholder-card">
+    <p><strong>The 3D viewer exists, but this run has no view data.</strong></p>
+    <p class="muted">The render step did not produce <code>view.json</code> for this run. The comparison above is unaffected.</p>
+  </div>
+  {% else %}
+  <div class="placeholder-card">
+    <p><strong>The 3D dual view is not built yet in this checkout.</strong></p>
+    <p class="muted">When <code>render/viewer.html</code> lands, it will appear here automatically — it renders the approved building in green and the as-built in red. The data it needs is already saved for this run.</p>
+    <p class="small"><a href="/runs/{{ run_id }}/view.json">view.json for this run</a> · <a href="/api/report/{{ run_id }}">report.json</a></p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card" id="run-details">
+  <h2>How this result was made <span class="en-sub np" lang="ne">यो नतिजा कसरी बन्यो</span></h2>
+  <div class="grid-2 details-grid">
+    <div>
+      <h3>Inputs</h3>
+      <ul class="kv">
+        <li><span>Drawing</span><span><code>{{ uploads.drawing.file if uploads.drawing else (drawing_name or "—") }}</code></span></li>
+        <li><span>Photos</span><span>{{ photos_count }} accepted{% if uploads.photos_skipped %}, {{ uploads.photos_skipped | length }} skipped{% endif %}</span></li>
+        <li><span>Known dimension</span><span>{% if known_dimension %}{{ known_dimension }} m{% else %}not given{% endif %}</span></li>
+        <li><span>Stage (as told / as seen)</span><span>{{ stage_label or "not sure" }}{% if observed_info and observed_info.stage and stage_label != observed_info.stage %} → {{ observed_info.stage }}{% endif %}</span></li>
+        <li><span>AI provider</span><span>{{ ai_provider }}</span></li>
+      </ul>
+      {% if uploads.photos_skipped %}
+      <p class="muted small">Skipped: {% for s in uploads.photos_skipped %}<code>{{ s.file }}</code> ({{ s.reason }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+      {% endif %}
+    </div>
+    <div>
+      <h3>Provenance</h3>
+      <ul class="kv">
+        {% if scene_info %}
+        <li><span>Drawing source</span><span>{{ scene_info.source_kind }}{% if scene_info.scale_source %} · scale: {{ scene_info.scale_source }}{% endif %}</span></li>
+        <li><span>Extracted from drawing</span><span>{{ scene_info.walls }} walls · {{ scene_info.openings }} openings · {{ scene_info.rooms }} rooms · {{ scene_info.dimensions }} dims</span></li>
+        {% endif %}
+        {% if observed_info %}
+        <li><span>Site stage evidence</span><span>{{ observed_info.stage }}{% if observed_info.stage_source %} ({{ observed_info.stage_source }}{% if observed_info.stage_confidence is not none %}, {{ (observed_info.stage_confidence * 100) | round | int }}%{% endif %}){% endif %}</span></li>
+        <li><span>Observed from photos</span><span>{{ observed_info.captures }} captures · {{ observed_info.elements }} elements · {{ observed_info.scale_refs }} scale refs</span></li>
+        {% endif %}
+        {% if timings_ms %}
+        <li><span>Step timings</span><span>{% for k, v in timings_ms.items() %}{{ k }} {{ v }} ms{% if not loop.last %} · {% endif %}{% endfor %}</span></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+  {% if scene_info and scene_info.warnings %}<p class="muted small">Drawing warnings: {{ scene_info.warnings | join("; ") }}</p>{% endif %}
+  {% if observed_info and observed_info.warnings %}<p class="muted small">Photo warnings: {{ observed_info.warnings | join("; ") }}</p>{% endif %}
+  {% if narration_np %}
+  <h3>Nepali summary <span class="np" lang="ne">नेपाली सारांश</span></h3>
+  <ul class="limits-list">{% for line in narration_np %}<li><p class="np" lang="ne">{{ line }}</p></li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+<section class="card limits-card" id="limits">
+  <h2>कर्मीले के भन्न सक्दैन <span class="en-sub">What Karmi cannot tell you</span></h2>
+  {% if limits %}
+  <ul class="limits-list">
+    {% for line in limits %}<li><p>{{ line }}</p></li>{% endfor %}
+  </ul>
+  {% endif %}
+  <ul class="limits-list">
+    {% for en, np in standing_limits %}
+    <li>
+      <p>{{ en }}</p>
+      <p class="np" lang="ne">{{ np }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card raw-links">
+  <h2>Raw data <span class="en-sub np" lang="ne">कच्चा तथ्याङ्क</span></h2>
+  <ul class="link-list">
+    <li><a href="/api/report/{{ run_id }}">report.json</a> — the comparison report</li>
+    {% if has_view_json %}<li><a href="/runs/{{ run_id }}/view.json">view.json</a> — data for the 3D view</li>{% endif %}
+    <li><a href="/runs/{{ run_id }}/run.json">run.json</a> — the run manifest</li>
+    <li><a href="/runs/{{ run_id }}/scene.json">scene.json</a> — the approved model read from the drawing</li>
+    <li><a href="/runs/{{ run_id }}/observed.json">observed.json</a> — what the photos suggested</li>
+    <li><a href="/api/runs">/api/runs</a> — all runs</li>
+  </ul>
+</section>
+
+{% endblock %}

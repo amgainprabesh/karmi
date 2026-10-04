@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Karmi (कर्मी) — approved design vs built reality{% endblock %}</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">क</span>
+      <span class="brand-text"><strong>Karmi</strong> <span class="np">कर्मी</span></span>
+    </a>
+    <p class="tagline">Approved naksa in, site photos in — a checklist of what to verify.</p>
+  </div>
+</header>
+
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p class="statement-en"><strong>Karmi reports items to verify. It never declares a violation.</strong></p>
+    <p class="statement-np np" lang="ne"><strong>कर्मीले जाँच गर्नुपर्ने विषयहरू मात्र देखाउँछ — यसले कहिल्यै उल्लंघन भनी घोषणा गर्दैन।</strong></p>
+    <p class="foot-note">Local &amp; private · not a legal document · not a municipal inspection</p>
+  </div>
+</footer>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

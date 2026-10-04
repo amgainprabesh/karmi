@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Karmi (कर्मी) — upload your naksa and site photos{% endblock %}
+{% block content %}
+
+<section class="card hero">
+  <h1>Compare your approved naksa with what is being built</h1>
+  <p class="np lead-np" lang="ne">स्वीकृत नक्सा र निर्माण स्थलका फोटो तुलना गरेर, पुनः जाँच गर्नुपर्ने विषयहरूको सूची।</p>
+  <div class="statement-banner" role="note">
+    <p class="statement-np np" lang="ne">कर्मीले <strong>जाँच गर्नुपर्ने विषयहरू</strong> मात्र देखाउँछ — यसले कहिल्यै <strong>उल्लंघन</strong> भनी घोषणा गर्दैन।</p>
+    <p class="statement-en">Karmi reports <strong>items to verify</strong>. It never declares a <strong>violation</strong>.</p>
+  </div>
+</section>
+
+{% if error %}
+<div class="alert alert-error" role="alert">
+  <p><strong>{{ error }}</strong></p>
+  {% if error_np %}<p class="np" lang="ne">{{ error_np }}</p>{% endif %}
+</div>
+{% endif %}
+
+<section class="card">
+  <h2>Upload <span class="en-sub np" lang="ne">अपलोड गर्नुहोस्</span></h2>
+  <form id="upload-form" action="/analyze" method="post" enctype="multipart/form-data">
+    <div class="field">
+      <label for="drawing">Approved drawing — naksa (PDF) <span class="req">required</span></label>
+      <span class="hint">The drawing your municipality approved. PDF only. <span class="np" lang="ne">पालिकाले स्वीकृत गरेको नक्सा — PDF मात्र।</span></span>
+      <input type="file" id="drawing" name="drawing" accept=".pdf,application/pdf" required>
+    </div>
+
+    <div class="field">
+      <label for="photos">Site photos <span class="opt">optional</span></label>
+      <span class="hint">Photos of the construction site, today or over time. Several files allowed (JPG / PNG / WebP / HEIC). <span class="np" lang="ne">निर्माण स्थलका फोटो — धेरै फाइल राख्न सकिन्छ।</span></span>
+      <input type="file" id="photos" name="photos" accept="image/*" multiple>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="known_dimension">Known dimension in metres <span class="opt">optional</span></label>
+        <span class="hint">If you know one real size — for example, the front wall is 10 m — type it here. It helps Karmi scale the photos. <span class="np" lang="ne">एउटा थाहा भएको नाप (मिटरमा) — जस्तै अगाडिको भित्ता १० मिटर।</span></span>
+        <input type="number" id="known_dimension" name="known_dimension" step="0.01" min="0.01" max="10000" placeholder="e.g. 10.0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label for="stage">Construction stage <span class="opt">optional</span></label>
+        <span class="hint">Where the work is right now. <span class="np" lang="ne">अहिले निर्माण कुन चरणमा छ।</span></span>
+        <select id="stage" name="stage">
+          <option value="">Not sure / थाहा छैन</option>
+          {% for s, label in stages %}<option value="{{ s }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" id="upload-submit">Run the comparison · तुलना चलाउनुहोस्</button>
+      <span id="upload-status" class="muted" aria-live="polite"></span>
+    </div>
+    <div id="upload-progress" class="progress js-only" hidden><div id="upload-bar" class="progress-bar"></div></div>
+    <div id="upload-error" class="alert alert-error js-only" role="alert" hidden></div>
+    <noscript><p class="muted small">JavaScript is off — that is fine. The form still works and will take you straight to the results page.</p></noscript>
+  </form>
+</section>
+
+<section class="card">
+  <h2>What Karmi does <span class="en-sub np" lang="ne">कर्मीले के गर्छ</span></h2>
+  <ol class="steps">
+    <li><strong>Reads the approved drawing.</strong> Walls, doors, windows, rooms and sizes are extracted from the naksa PDF. <span class="np" lang="ne">स्वीकृत नक्साबाट भित्ता, ढोका, झ्याल, कोठा र नाप निकाल्छ।</span></li>
+    <li><strong>Reads the site photos.</strong> It identifies the construction stage and visible elements, with a confidence value for every estimate. <span class="np" lang="ne">साइटका फोटोबाट निर्माण चरण र देखिने भागहरू पहिचान गर्छ — प्रत्येक अनुमानसँग विश्वास स्तर हुन्छ।</span></li>
+    <li><strong>Compares the two.</strong> Element by element: what the drawing expects vs what the photos show. <span class="np" lang="ne">नक्साले देखाएको र फोटोले देखाएको — एक-एक भाग तुलना गर्छ।</span></li>
+    <li><strong>Gives you a checklist.</strong> A numbered list of things to verify with your engineer or ward office — never an accusation. <span class="np" lang="ne">इन्जिनियर वा वडा कार्यालयसँग जाँच्नुपर्ने क्रमबद्ध सूची दिन्छ — कुनै आरोप होइन।</span></li>
+  </ol>
+</section>
+
+<section class="card limits-card">
+  <h2>What Karmi cannot tell you <span class="en-sub np" lang="ne">कर्मीले के भन्न सक्दैन</span></h2>
+  <ul class="limits-list">
+    {% for en, np in standing_limits %}
+    <li>
+      <p>{{ en }}</p>
+      <p class="np" lang="ne">{{ np }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if runs %}
+<section class="card">
+  <h2>Recent runs <span class="en-sub np" lang="ne">हालैका रनहरू</span></h2>
+  <ul class="run-list">
+    {% for r in runs %}
+    <li>
+      <a href="/run/{{ r.run_id }}"><code>{{ r.run_id }}</code></a>
+      <span class="muted small">{{ r.generated_at or "" }} · {{ r.drawing or "—" }} · {{ r.photos }} photo(s)</span>
+      {% if r.ok %}<span class="pill sev-ok">completed</span>{% else %}<span class="pill sev-warn">with limitations</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% endblock %}
