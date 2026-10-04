@@ -975,6 +975,35 @@ def diff_scene(
     # order-dependent and gets the wrong answer: a 1.5 m observed window can be paired
     # with a 1.2 m drawn window (25% off) while the 1.5 m drawn window further along
     # the same wall is left unmatched, turning a perfect match into a false finding.
+    #
+    # Openings additionally respect wall identity (_same_wall below): when a measured
+    # location hint says "front" and the drawn opening is on a side wall, that pair is
+    # rejected here, not merely de-prioritised — otherwise a front-window measurement
+    # can be paired with an east-wall door, as happened in testing.
+    wall_by_id = {w.id: w for w in scene.walls}
+
+    def _same_wall(obj: Any, oe: ObservedElement) -> bool | None:
+        """True/False when wall identity is decidable from the location hint, else None."""
+        sid = getattr(obj, "wall_id", None)
+        if not sid or sid not in wall_by_id:
+            return None
+        hint = (oe.location_hint or "").lower()
+        if not hint:
+            return None
+        w = wall_by_id[sid]
+        horiz = abs(w.start[1] - w.end[1]) < 1e-6
+        if "front" in hint or "south" in hint:
+            return horiz and w.start[1] == max(
+                x.start[1] for x in scene.walls if abs(x.start[1] - x.end[1]) < 1e-6
+            )
+        if "rear" in hint or "back" in hint or "north" in hint:
+            return horiz and w.start[1] == min(
+                x.start[1] for x in scene.walls if abs(x.start[1] - x.end[1]) < 1e-6
+            )
+        if "side" in hint or "east" in hint or "west" in hint:
+            return not horiz
+        return None
+
     candidates: list[tuple[float, int, int]] = []  # (rel, scene_index, observed_index)
     for si, (t, obj) in enumerate(scene_items):
         if f"{t}:{obj.id}" in used_scene:
@@ -983,8 +1012,11 @@ def diff_scene(
             if idx in used_obs:
                 continue
             rel = _candidate_rel(t, obj, oe)
-            if rel is not None:
-                candidates.append((rel, si, idx))
+            if rel is None:
+                continue
+            if t == "opening" and _same_wall(obj, oe) is False:
+                continue
+            candidates.append((rel, si, idx))
     candidates.sort(key=lambda c: (c[0], c[1], c[2]))
 
     for _rel, si, idx in candidates:

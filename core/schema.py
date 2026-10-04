@@ -117,6 +117,24 @@ class Wall(BaseModel):
             raise ValueError("wall has zero length")
         return v
 
+    def distance_to_point(self, p: tuple[float, float]) -> float:
+        """Perpendicular-ish distance from `p` to this wall segment (standard
+        point-segment distance). Used for spatial matching of openings."""
+        (x1, y1), (x2, y2) = self.start, self.end
+        dx, dy = x2 - x1, y2 - y1
+        len2 = dx * dx + dy * dy
+        if len2 < 1e-12:
+            return ((p[0] - x1) ** 2 + (p[1] - y1) ** 2) ** 0.5
+        t = max(0.0, min(1.0, ((p[0] - x1) * dx + (p[1] - y1) * dy) / len2))
+        ex, ey = x1 + t * dx, y1 + t * dy
+        return ((p[0] - ex) ** 2 + (p[1] - ey) ** 2) ** 0.5
+
+    def bbox(self, pad: float = 0.0) -> tuple[float, float, float, float]:
+        """Axis-aligned bbox with optional pad (minx, miny, maxx, maxy)."""
+        xs = [self.start[0], self.end[0]]
+        ys = [self.start[1], self.end[1]]
+        return (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad)
+
     @property
     def length(self) -> float:
         return ((self.end[0] - self.start[0]) ** 2 + (self.end[1] - self.start[1]) ** 2) ** 0.5
@@ -131,6 +149,13 @@ class Opening(BaseModel):
     height: float | None = Field(None, description="metres")
     sill_height: float | None = None
     provenance: Provenance = Provenance()
+
+    @property
+    def bbox(self) -> tuple[float, float, float, float]:
+        """Half-open bounding box around the opening centre (minx, miny, maxx, maxy)."""
+        w = (self.width or 1.0) / 2.0
+        cx, cy = self.center
+        return (cx - w, cy - 0.15, cx + w, cy + 0.15)
 
 
 class Room(BaseModel):
