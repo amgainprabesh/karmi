@@ -1,6 +1,6 @@
 # `scripts/` — one-command paths for Karmi
 
-Three small scripts that make the project easy to run, demo and check without
+Four small scripts that make the project easy to run, demo and check without
 reading any source. Everything here is offline: no network, no GPU, no API key,
 no AI model.
 
@@ -188,9 +188,28 @@ Exit codes: `0` every step succeeded, `1` otherwise.
 
 ---
 
+## `scripts/check_dod.py` — Definition of Done checker (PLAN.md §2, D1–D8)
+
+Verifies every outcome promised in `docs/PLAN.md` §2 as a runnable check.
+Runs the base pipeline, checks schema round-trips (D1), tests that differences
+are real with a zero-false-positive control run (D2), proves 3D view highlights
+are data-driven by verifying delta removal clears highlights (D3), exercises
+the web workflow including degraded path (D4), tests that zero AI yields zero
+fabricated elements and validates `AI_USAGE.md` call sites (D5), verifies
+determinism and tests (D6), enforces confidence bounds and forbidden wording
+invariants (D7), and inspects judge-facing documentation presence (D8).
+
+```bash
+python scripts/check_dod.py               # run all DoD checks
+python scripts/check_dod.py --skip-pytest # faster iteration
+python scripts/check_dod.py --json        # JSON report
+```
+
+---
+
 ## Notes
 
-- All three scripts only need the venv from `requirements.txt`; they never
+- All scripts only need the venv from `requirements.txt`; they never
   touch the network (the smoke test talks to `127.0.0.1` only).
 - `runs/demo/` and any `runs/` output are gitignored runtime artifacts.
 - These scripts are read-only with respect to the source tree: they write only

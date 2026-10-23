@@ -7,8 +7,8 @@ Prints every step with its real HTTP status:
      (runs go to a throwaway temp dir — the repository is left untouched),
   2. polls ``GET /healthz`` until the server is ready (bounded timeout —
      no blind sleeps),
-  3. POSTs a real fixture drawing + the three sample photos + the measurement
-     sidecar to ``/api/analyze`` as multipart/form-data (http.client),
+  3. POSTs a real fixture drawing + the three sample photos + their measurement
+     sidecars to ``/api/analyze`` as multipart/form-data (http.client),
   4. follows the run page ``GET /run/<id>`` and asserts the items-to-verify
      list is present in the rendered HTML,
   5. checks ``GET /api/report/<id>`` returns the same verify list as JSON,
@@ -49,7 +49,7 @@ PHOTO_NAMES = (
     "rear_foundation_stage.jpg",
     "side_columns_stage.jpg",
 )
-SIDECAR_NAME = "front_walls_stage.jpg.json"
+SIDECAR_NAMES = tuple(f"{n}.json" for n in PHOTO_NAMES)
 KNOWN_DIMENSION = "10.0"
 TOTAL_STEPS = 7
 
@@ -224,8 +224,8 @@ def main(argv=None) -> int:
         # -- inputs ---------------------------------------------------------- #
         drawing = REPO_ROOT / "fixtures" / "naksa_base.pdf"
         photos = [REPO_ROOT / "fixtures" / "photos" / n for n in PHOTO_NAMES]
-        sidecar = REPO_ROOT / "fixtures" / "photos" / SIDECAR_NAME
-        missing = [p for p in [drawing, *photos, sidecar] if not p.is_file()]
+        sidecars = [REPO_ROOT / "fixtures" / "photos" / n for n in SIDECAR_NAMES]
+        missing = [p for p in [drawing, *photos, *sidecars] if not p.is_file()]
         if missing:
             raise SmokeFailure("fixture(s) missing: " + ", ".join(str(p) for p in missing))
 
@@ -248,13 +248,9 @@ def main(argv=None) -> int:
 
         # -- 3. POST the real fixture drawing -------------------------------- #
         fields = [("known_dimension", KNOWN_DIMENSION)]
-        files = [
-            ("drawing", drawing.name, "application/pdf", drawing.read_bytes()),
-            ("photos", photos[0].name, "image/jpeg", photos[0].read_bytes()),
-            ("photos", photos[1].name, "image/jpeg", photos[1].read_bytes()),
-            ("photos", photos[2].name, "image/jpeg", photos[2].read_bytes()),
-            ("photos", sidecar.name, "application/json", sidecar.read_bytes()),
-        ]
+        files = [("drawing", drawing.name, "application/pdf", drawing.read_bytes())]
+        files += [("photos", p.name, "image/jpeg", p.read_bytes()) for p in photos]
+        files += [("photos", s.name, "application/json", s.read_bytes()) for s in sidecars]
         boundary, body = build_multipart(fields, files)
         status, _headers, raw = request(
             port, "POST", "/api/analyze", body=body,
@@ -278,8 +274,16 @@ def main(argv=None) -> int:
             raise SmokeFailure("POST /api/analyze returned no run_id")
         if int(counts.get("total") or 0) <= 0:
             raise SmokeFailure(f"POST /api/analyze compared 0 elements: {counts}")
+        # every sidecar must survive the upload path: the demo set measures one
+        # high, one medium and one low difference (window, side door, bedroom)
+        n_flagged = sum(int(counts.get(k) or 0) for k in ("high", "medium"))
+        if n_flagged < 2:
+            raise SmokeFailure(
+                f"expected the sidecar measurements to flag >= 2 high/medium differences "
+                f"through the web path, got {counts} — were the sidecars dropped?"
+            )
         print(f"[3/{TOTAL_STEPS}] POST /api/analyze    -> {status}  (run_id={run_id}; "
-              f"total={counts.get('total')}; high={counts.get('high')}; "
+              f"total={counts.get('total')}; high={counts.get('high')}; medium={counts.get('medium')}; "
               f"verify_items={counts.get('verify_items')}; photos={payload.get('photos_saved')})")
 
         # -- 4. follow the run page ------------------------------------------ #

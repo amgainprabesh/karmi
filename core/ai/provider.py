@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import base64
 import re
+import time
 from pathlib import Path
-from typing import Any, Protocol, Sequence, runtime_checkable
+from typing import Any, Callable, Protocol, Sequence, TypeVar, runtime_checkable
 
 import httpx
 
@@ -35,6 +36,33 @@ DEFAULT_OLLAMA_MODEL = "qwen2.5-vl:7b"
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_COMPAT_BASE_URL = "http://localhost:8000/v1"
 DEFAULT_TIMEOUT_S = 60.0
+
+T = TypeVar("T")
+
+
+def with_retry(
+    func: Callable[[], T],
+    *,
+    max_retries: int = 3,
+    initial_delay: float = 0.1,
+    backoff_factor: float = 2.0,
+    retry_exceptions: tuple[type[Exception], ...] = (httpx.HTTPError, OSError),
+) -> T:
+    """Execute ``func`` with exponential backoff on transient errors."""
+    delay = initial_delay
+    last_exc: Exception | None = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return func()
+        except retry_exceptions as exc:
+            last_exc = exc
+            if attempt == max_retries:
+                raise
+            time.sleep(delay)
+            delay *= backoff_factor
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("with_retry terminated without executing function")
 
 
 # --------------------------------------------------------------------------- #
@@ -184,6 +212,10 @@ class AIProvider(Protocol):
         """Cheap check: is this provider usable right now? Must never raise."""
         ...
 
+    def diagnose(self) -> dict[str, Any]:
+        """Diagnostic probe: returns provider status, connectivity, and model info."""
+        ...
+
 
 # --------------------------------------------------------------------------- #
 # null provider (default)
@@ -196,6 +228,14 @@ class NullProvider:
 
     def available(self) -> bool:
         return False
+
+    def diagnose(self) -> dict[str, Any]:
+        return {
+            "provider": self.name,
+            "status": "disabled",
+            "available": False,
+            "reason": "NullProvider configured (offline/mock mode)",
+        }
 
     def complete(
         self,
@@ -241,6 +281,42 @@ class OllamaProvider:
         except httpx.HTTPError:
             return False
         return resp.status_code == 200
+
+    def diagnose(self) -> dict[str, Any]:
+        t0 = time.perf_counter()
+        try:
+            resp = httpx.get(f"{self.base_url}/api/tags", timeout=min(2.0, self.timeout))
+            latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+            if resp.status_code != 200:
+                return {
+                    "provider": self.name,
+                    "status": "error",
+                    "available": False,
+                    "http_status": resp.status_code,
+                    "error": f"HTTP {resp.status_code}",
+                }
+            tags = resp.json().get("models", [])
+            tag_names = [m.get("name", "") for m in tags]
+            model_present = any(self.model in name or name in self.model for name in tag_names)
+            return {
+                "provider": self.name,
+                "status": "healthy" if model_present else "model_missing",
+                "available": True,
+                "latency_ms": latency_ms,
+                "base_url": self.base_url,
+                "model": self.model,
+                "model_available": model_present,
+                "installed_models": tag_names[:10],
+            }
+        except Exception as exc:
+            return {
+                "provider": self.name,
+                "status": "unreachable",
+                "available": False,
+                "base_url": self.base_url,
+                "model": self.model,
+                "error": str(exc),
+            }
 
     def complete(
         self,
@@ -333,6 +409,37 @@ class OpenAICompatProvider:
             return False
         return True
 
+    def diagnose(self) -> dict[str, Any]:
+        t0 = time.perf_counter()
+        try:
+            resp = httpx.get(self._url("/models"), headers=self._headers(), timeout=min(2.0, self.timeout))
+            latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+            if resp.status_code >= 400:
+                return {
+                    "provider": self.name,
+                    "status": "error",
+                    "available": False,
+                    "http_status": resp.status_code,
+                    "error": f"HTTP {resp.status_code}",
+                }
+            return {
+                "provider": self.name,
+                "status": "healthy",
+                "available": True,
+                "latency_ms": latency_ms,
+                "base_url": self.base_url,
+                "model": self.model,
+            }
+        except Exception as exc:
+            return {
+                "provider": self.name,
+                "status": "unreachable",
+                "available": False,
+                "base_url": self.base_url,
+                "model": self.model,
+                "error": str(exc),
+            }
+
     def complete(
         self,
         prompt: str,
@@ -384,6 +491,83 @@ class OpenAICompatProvider:
         return message
 
 
+# --------------------------------------------------------------------------- #
+# fallback provider (resilient multi-backend chain)
+# --------------------------------------------------------------------------- #
+class FallbackProvider:
+    """Resilient provider chaining multiple AI backends in priority order.
+
+    Tries primary provider first; if primary raises AIUnavailable or AIProviderError,
+    transparently degrades to subsequent providers while recording fallback events.
+    """
+
+    name = "fallback"
+
+    def __init__(self, providers: Sequence[Any]) -> None:
+        if not providers:
+            raise ValueError("FallbackProvider requires at least one provider")
+        self.providers = list(providers)
+        self.fallback_events: list[dict[str, Any]] = []
+
+    @property
+    def model(self) -> str:
+        return getattr(self.providers[0], "model", "")
+
+    def available(self) -> bool:
+        return any(p.available() for p in self.providers)
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        images: Sequence[Any] | None = None,
+        max_tokens: int = 1024,
+        temperature: float = 0.1,
+    ) -> str:
+        errors: list[str] = []
+        for idx, prov in enumerate(self.providers):
+            try:
+                return prov.complete(
+                    prompt,
+                    system=system,
+                    images=images,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+            except (AIUnavailable, AIProviderError, Exception) as exc:
+                err_msg = f"{getattr(prov, 'name', 'provider')} ({getattr(prov, 'model', '')}): {exc}"
+                errors.append(err_msg)
+                self.fallback_events.append({
+                    "provider": getattr(prov, "name", "unknown"),
+                    "model": getattr(prov, "model", ""),
+                    "reason": str(exc),
+                })
+                continue
+        raise AIUnavailable(
+            f"All providers in fallback chain failed: {'; '.join(errors)}"
+        )
+
+    def diagnose(self) -> dict[str, Any]:
+        reports = []
+        any_avail = False
+        for p in self.providers:
+            d = (
+                p.diagnose()
+                if hasattr(p, "diagnose")
+                else {"provider": getattr(p, "name", "unknown"), "available": p.available()}
+            )
+            if d.get("available"):
+                any_avail = True
+            reports.append(d)
+        return {
+            "provider": "fallback",
+            "available": any_avail,
+            "providers": reports,
+            "fallback_events": list(self.fallback_events),
+        }
+
+
 __all__ = [
     "DEFAULT_OLLAMA_MODEL",
     "DEFAULT_OLLAMA_BASE_URL",
@@ -397,6 +581,8 @@ __all__ = [
     "NullProvider",
     "OllamaProvider",
     "OpenAICompatProvider",
+    "FallbackProvider",
+    "with_retry",
     "is_open_weight",
     "assert_open_weight",
 ]

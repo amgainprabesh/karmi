@@ -32,11 +32,13 @@ from .provider import (
     AIProviderError,
     AIUnavailable,
     ClosedModelError,
+    FallbackProvider,
     NullProvider,
     OllamaProvider,
     OpenAICompatProvider,
     assert_open_weight,
     is_open_weight,
+    with_retry,
 )
 from .vision import AIExtractionError, observe_photos
 
@@ -49,6 +51,8 @@ __all__ = [
     "NullProvider",
     "OllamaProvider",
     "OpenAICompatProvider",
+    "FallbackProvider",
+    "with_retry",
     "OPEN_WEIGHT_FAMILIES",
     "DEFAULT_OLLAMA_MODEL",
     "DEFAULT_OLLAMA_BASE_URL",
@@ -127,6 +131,14 @@ def get_provider(config: Any = None) -> AIProvider:
             model=model, base_url=base_url, api_key=api_key, timeout=_timeout(config)
         )
 
+    if kind in ("fallback", "resilient"):
+        primary = OllamaProvider(
+            model=_cfg_get(config, "model") or os.environ.get("KARMI_AI_MODEL") or DEFAULT_OLLAMA_MODEL,
+            base_url=_cfg_get(config, "base_url") or os.environ.get("KARMI_AI_BASE_URL") or DEFAULT_OLLAMA_BASE_URL,
+            timeout=_timeout(config),
+        )
+        return FallbackProvider([primary, NullProvider()])
+
     raise ValueError(
-        f"Unknown AI provider {kind!r}: expected one of none | ollama | openai_compat"
+        f"Unknown AI provider {kind!r}: expected one of none | ollama | openai_compat | fallback"
     )

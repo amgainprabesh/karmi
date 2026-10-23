@@ -1,0 +1,10 @@
+[run]
+source = core, render, web, dataset
+omit =
+    */tests/*
+    render/_selfcheck.py
+    */__main__.py
+
+[report]
+show_missing = true
+skip_covered = false

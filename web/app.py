@@ -700,6 +700,89 @@ def api_runs() -> JSONResponse:
     return JSONResponse(content={"ok": True, "runs": _list_runs(limit=200)})
 
 
+@app.get("/run/{run_id}/export/json")
+def export_json(run_id: str) -> Response:
+    rdir = _run_dir(run_id)
+    if rdir is None or not rdir.is_dir():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Run not found."})
+    p = rdir / "report.json"
+    if not p.is_file():
+        return JSONResponse(
+            status_code=404, content={"ok": False, "error": "Report JSON not available for this run."}
+        )
+    return FileResponse(
+        p,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="karmi-report-{run_id}.json"'},
+    )
+
+
+@app.get("/run/{run_id}/export/report")
+def export_report(run_id: str) -> Response:
+    rdir = _run_dir(run_id)
+    if rdir is None or not rdir.is_dir():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Run not found."})
+    p = rdir / "report.html"
+    if not p.is_file():
+        return JSONResponse(
+            status_code=404, content={"ok": False, "error": "Report HTML not available for this run."}
+        )
+    return FileResponse(
+        p,
+        media_type="text/html; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="karmi-report-{run_id}.html"'},
+    )
+
+
+@app.get("/run/{run_id}/export/print")
+def export_print(run_id: str) -> Response:
+    rdir = _run_dir(run_id)
+    if rdir is None or not rdir.is_dir():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Run not found."})
+    p = rdir / "report.json"
+    if not p.is_file():
+        return JSONResponse(
+            status_code=404, content={"ok": False, "error": "Report JSON not available for this run."}
+        )
+    rep_data = _read_json(p) or {}
+    from core.pdf_export import render_printable_report
+    html_content = render_printable_report(
+        rep_data,
+        metadata={
+            "run_id": run_id,
+            "created_at": rep_data.get("generated_at", _now_iso()),
+        },
+    )
+    return HTMLResponse(content=html_content, media_type="text/html; charset=utf-8")
+
+
+@app.get("/api/export/{run_id}")
+def api_export(run_id: str) -> JSONResponse:
+    rdir = _run_dir(run_id)
+    if rdir is None or not rdir.is_dir():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "Run not found."})
+    rep_data = _read_json(rdir / "report.json") or {}
+    reg_data = rep_data.get("meta", {}).get("regulatory", {})
+    summary = rep_data.get("summary", {})
+    return JSONResponse(
+        content={
+            "ok": True,
+            "run_id": run_id,
+            "summary": summary,
+            "regulatory": reg_data,
+            "deltas_count": len(rep_data.get("deltas", [])),
+            "verify_items_count": len(rep_data.get("verify_list", [])),
+            "links": {
+                "report_html": f"/run/{run_id}/export/report",
+                "report_json": f"/run/{run_id}/export/json",
+                "report_print": f"/run/{run_id}/export/print",
+                "viewer": f"/viewer/{run_id}/",
+                "run_page": f"/run/{run_id}",
+            },
+        }
+    )
+
+
 @app.get("/runs/{run_id}/{name}")
 def run_file(run_id: str, name: str) -> Response:
     rdir = _run_dir(run_id)

@@ -833,6 +833,9 @@ def build_view(scene: Any, observed: Any, report: Any) -> dict[str, Any]:
         "narration_en": list((r or {}).get("narration_en") or []),
         "narration_np": list((r or {}).get("narration_np") or []),
         "diff_summary": dict((r or {}).get("summary") or {}),
+        "municipal": dict((r or {}).get("meta", {}).get("municipal", {}) if isinstance((r or {}).get("meta"), dict) else {}),
+        "regulatory": dict((r or {}).get("meta", {}).get("regulatory", {}) if isinstance((r or {}).get("meta"), dict) else {}),
+        "scale_m_per_unit": (s or {}).get("scale_m_per_unit"),
         "empty": empty,
     }
 

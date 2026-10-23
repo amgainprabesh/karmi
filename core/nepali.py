@@ -408,6 +408,9 @@ WEAK_CAPPED_EN = "Because the evidence is weak, this item's severity was capped.
 
 
 def weak_evidence_np(confidence: float, *, threshold: float = 0.50, capped: bool = False) -> str:
+    # never claim "below the threshold" when it is not — return nothing instead
+    if float(confidence) >= float(threshold):
+        return ""
     base = WEAK_EVIDENCE_NP.format(
         confidence=format_confidence_np(confidence), threshold=format_confidence_np(threshold)
     )
@@ -415,6 +418,8 @@ def weak_evidence_np(confidence: float, *, threshold: float = 0.50, capped: bool
 
 
 def weak_evidence_en(confidence: float, *, threshold: float = 0.50, capped: bool = False) -> str:
+    if float(confidence) >= float(threshold):
+        return ""
     base = WEAK_EVIDENCE_EN.format(
         confidence=f"{float(confidence):.2f}", threshold=f"{float(threshold):.2f}"
     )

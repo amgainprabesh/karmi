@@ -30,6 +30,14 @@
       "location_hint": "front facade, left of centre",
       "confidence": 0.8,
       "evidence": "window opening measured 1.00 m wide x 1.20 m high (sill about 0.90 m) — narrower than the drawing"
+    },
+    {
+      "kind": "opening",
+      "matches_scene_id": "O9",
+      "approx_size": { "width": 1.2, "height": 1.2 },
+      "location_hint": "front facade window, right of centre",
+      "confidence": 0.8,
+      "evidence": "window opening measured 1.20 m wide x 1.20 m high — as drawn"
     }
   ]
 }

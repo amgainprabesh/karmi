@@ -21,6 +21,9 @@ body{background:var(--paper);color:var(--ink);font:14px/1.45 system-ui,"Segoe UI
 #btn-play{font:inherit;font-size:12.5px;padding:6px 14px;border-radius:999px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;white-space:nowrap}
 #btn-play:hover{filter:brightness(1.06)}
 #btn-play:disabled{opacity:.45;cursor:not-allowed}
+#btn-measure.active{background:#0284c7;color:#fff;border-color:#0284c7}
+#measure-overlay{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.88);color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:500;pointer-events:none;z-index:10;display:none;backdrop-filter:blur(4px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+#measure-overlay.on{display:flex;align-items:center;gap:8px}
 #meta-line{font-size:12px;color:var(--muted);margin-left:auto;text-align:right}
 #banner{position:relative;z-index:5;background:#fdf6e9;border-bottom:1px solid var(--line);max-height:26vh;overflow:auto}
 #banner .msg{padding:6px 14px;font-size:12.5px;color:#5a4a2f;border-top:1px solid rgba(0,0,0,.04)}
@@ -81,20 +84,23 @@ body{background:var(--paper);color:var(--ink);font:14px/1.45 system-ui,"Segoe UI
   <header id="topbar">
     <div id="brand">कर्मी <span>Karmi — approved ↔ as-built</span></div>
     <div class="tabs" id="view-tabs">
-      <button id="view-approved" class="tab active" type="button" title="the approved drawing">Approved</button>
-      <button id="view-observed" class="tab" type="button" title="what the site photos show">As-built</button>
-      <button id="view-diff" class="tab" type="button" title="both, differences in red">Diff</button>
+      <button id="view-approved" class="tab active" type="button" title="the approved drawing">स्वीकृत / Approved</button>
+      <button id="view-observed" class="tab" type="button" title="what the site photos show">स्थलगत / As-built</button>
+      <button id="view-diff" class="tab" type="button" title="both, differences in red">भिन्नता / Diff</button>
     </div>
     <div class="tabs" id="dim-tabs">
-      <button id="btn-2d" class="tab active" type="button">2D plan</button>
-      <button id="btn-3d" class="tab" type="button" title="needs three.js — offline via render/vendor/three.module.js">3D</button>
+      <button id="btn-2d" class="tab active" type="button">२डी नक्सा / 2D</button>
+      <button id="btn-3d" class="tab" type="button" title="needs three.js — offline via render/vendor/three.module.js">३डी / 3D</button>
     </div>
     <button id="btn-play" class="primary" type="button" title="extrude the floor plan upward — 2D नक्सा → 3D घर">▶ 2D नक्सा → 3D घर</button>
+    <button id="btn-measure" class="tab" type="button" title="दूरी नाप्नुहोस् — Click two points to measure distance">📏 नाप्नुहोस् / Measure</button>
+    <button id="btn-lang" class="tab" type="button" title="Toggle language / भाषा परिवर्तन">नेपाली ↔ EN</button>
     <div id="meta-line"></div>
   </header>
   <div id="banner" hidden></div>
   <main id="stage">
-    <div id="stage2d"><svg id="svg-plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div id="measure-overlay"><span id="measure-msg">पहिलो बिन्दु छान्नुहोस् / Click first point to measure distance</span></div>
+    <div id="stage2d"><svg id="svg-plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><g id="measure-layer"></g></svg></div>
     <div id="stage3d">
       <canvas id="canvas3d"></canvas>
       <div id="labels3d"></div>
@@ -107,12 +113,12 @@ body{background:var(--paper);color:var(--ink);font:14px/1.45 system-ui,"Segoe UI
       <div id="panel-body"></div>
     </aside>
     <div id="legend">
-      <span class="chip"><i style="border-color:#3f7d54"></i>matched</span>
-      <span class="chip"><i style="border-color:#c23227"></i>differs</span>
-      <span class="chip"><i class="dash" style="border-color:#c23227"></i>missing (in drawing, not built)</span>
-      <span class="chip"><i class="dot" style="border-color:#c23227"></i>unexpected (built, not drawn)</span>
-      <span class="chip"><i style="border-color:#8a8578"></i>unverifiable</span>
-      <span class="chip"><i class="hatch"></i>approx (confidence &lt; 0.5)</span>
+      <span class="chip"><i style="border-color:#3f7d54"></i>मिल्यो / matched</span>
+      <span class="chip"><i style="border-color:#c23227"></i>फरक / differs</span>
+      <span class="chip"><i class="dash" style="border-color:#c23227"></i>छुट्यो / missing</span>
+      <span class="chip"><i class="dot" style="border-color:#c23227"></i>अतिरिक्त / unexpected</span>
+      <span class="chip"><i style="border-color:#8a8578"></i>जाँच हुन सकेन / unverifiable</span>
+      <span class="chip"><i class="hatch"></i>अनुमानित / approx (&lt; 0.5)</span>
     </div>
   </main>
 </div>
@@ -698,7 +704,91 @@ function wireSVG(){
   }, {passive:false});
   svg.addEventListener("dblclick", function(){ resetView2D(); });
 }
+/* ============================ measurement & bilingual ruler ============================ */
+var M = {
+  active: false,
+  pts: [],
+  dist: null,
+  lang: "np"
+};
+
+function toDevDigits(s){
+  var map = {"0":"०","1":"१","2":"२","3":"३","4":"४","5":"५","6":"६","7":"७","8":"८","9":"९"};
+  return String(s).replace(/[0-9]/g, function(d){ return map[d] || d; });
+}
+
+function toggleMeasure(){
+  M.active = !M.active;
+  M.pts = [];
+  M.dist = null;
+  $("btn-measure").classList.toggle("active", M.active);
+  var ov = $("measure-overlay");
+  if (M.active){
+    ov.classList.add("on");
+    $("measure-msg").textContent = M.lang === "np" ? "पहिलो बिन्दु छान्नुहोस् (Click first point to measure distance)" : "Click first point to measure distance";
+  } else {
+    ov.classList.remove("on");
+    clearMeasureLayer();
+  }
+}
+
+function clearMeasureLayer(){
+  var ml = $("measure-layer");
+  if (ml) clearNode(ml);
+}
+
+function handleMeasureClick(pt){
+  M.pts.push(pt);
+  var svg = $("svg-plan");
+  var ml = $("measure-layer");
+  if (!ml){
+    ml = E("g", {id:"measure-layer", "pointer-events":"none"}, svg);
+  }
+  if (M.pts.length === 1){
+    clearMeasureLayer();
+    E("circle", {cx:pt[0], cy:pt[1], r:0.15, fill:"#0284c7", stroke:"#fff", "stroke-width":0.03}, ml);
+    $("measure-msg").textContent = M.lang === "np" ? "दोस्रो बिन्दु छान्नुहोस् (Click second point)" : "Click second point";
+  } else if (M.pts.length >= 2){
+    var p1 = M.pts[0], p2 = M.pts[1];
+    var dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    var rawDist = Math.hypot(dx, dy);
+    var scaleM = (S.view && S.view.meta && S.view.meta.scale_m_per_unit) ? S.view.meta.scale_m_per_unit : 1.0;
+    var distM = rawDist * scaleM;
+    var distFt = distM * 3.28084;
+    M.dist = {m: distM, ft: distFt};
+
+    E("circle", {cx:p2[0], cy:p2[1], r:0.15, fill:"#0284c7", stroke:"#fff", "stroke-width":0.03}, ml);
+    E("line", {x1:p1[0], y1:p1[1], x2:p2[0], y2:p2[1], stroke:"#0284c7", "stroke-width":0.06, "stroke-dasharray":"0.1 0.05"}, ml);
+
+    var mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2;
+    var txt = distM.toFixed(2) + " m (" + distFt.toFixed(1) + " ft) · " + toDevDigits(distM.toFixed(2)) + " मिटर";
+    var textEl = E("text", {x:mx, y:my - 0.2, "text-anchor":"middle", fill:"#0284c7", "font-size":"0.3", "font-weight":"bold"}, ml);
+    textEl.textContent = txt;
+
+    $("measure-msg").textContent = "दूरी (Distance): " + txt;
+    M.pts = [];
+  }
+}
+
+function toggleLang(){
+  M.lang = (M.lang === "np" ? "en" : "np");
+  var isNp = (M.lang === "np");
+  $("view-approved").textContent = isNp ? "स्वीकृत / Approved" : "Approved";
+  $("view-observed").textContent = isNp ? "स्थलगत / As-built" : "As-built";
+  $("view-diff").textContent = isNp ? "भिन्नता / Diff" : "Diff";
+  $("btn-2d").textContent = isNp ? "२डी नक्सा / 2D" : "2D plan";
+  $("btn-3d").textContent = isNp ? "३डी / 3D" : "3D";
+  $("btn-measure").textContent = isNp ? "📏 नाप्नुहोस् / Measure" : "📏 Measure";
+  renderMetaLine();
+  if (S.sel) renderPanel();
+}
+
 function handleSvgClick(e){
+  if (M.active){
+    var pt = screenToUser(e.clientX, e.clientY);
+    handleMeasureClick(pt);
+    return;
+  }
   var t = e.target, g = null;
   if (t && t.closest){ g = t.closest(".el"); }
   if (g){ select({ side:g.getAttribute("data-side"), id:g.getAttribute("data-eid"), etype:g.getAttribute("data-etype") }); }
@@ -1156,6 +1246,8 @@ function wireUI(){
   $("btn-2d").addEventListener("click", function(){ setDim("2d"); });
   $("btn-3d").addEventListener("click", function(){ setDim("3d"); });
   $("btn-play").addEventListener("click", function(){ playBuild(); });
+  $("btn-measure").addEventListener("click", function(){ toggleMeasure(); });
+  $("btn-lang").addEventListener("click", function(){ toggleLang(); });
   $("panel-close").addEventListener("click", function(){ select(null); });
   window.addEventListener("keydown", function(e){ if (e.key === "Escape") select(null); });
   window.addEventListener("resize", function(){ if (T.renderer) onResize3D(); });
@@ -1196,6 +1288,37 @@ function boot(){
     } else {
       wireUI();
       render2D();
+      var params = new URLSearchParams(window.location.search);
+      var focusTarget = params.get("focus") || params.get("highlight");
+      if (focusTarget && S.view) {
+        var matchedSel = null;
+        if (S.view.deltas) {
+          for (var di = 0; di < S.view.deltas.length; di++) {
+            var d = S.view.deltas[di];
+            if (d.id === focusTarget || d.scene_ref === focusTarget || d.observed_ref === focusTarget) {
+              if (d.scene_ref) {
+                matchedSel = {side: "approved", id: d.scene_ref};
+                setMode("diff");
+                break;
+              } else if (d.observed_ref) {
+                matchedSel = {side: "observed", id: d.observed_ref};
+                setMode("diff");
+                break;
+              }
+            }
+          }
+        }
+        if (!matchedSel) {
+          if (findEl({side: "approved", id: focusTarget})) {
+            matchedSel = {side: "approved", id: focusTarget};
+          } else if (findEl({side: "observed", id: focusTarget})) {
+            matchedSel = {side: "observed", id: focusTarget};
+          }
+        }
+        if (matchedSel) {
+          select(matchedSel);
+        }
+      }
     }
     dbg();
   }).catch(function(err){

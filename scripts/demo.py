@@ -2,7 +2,7 @@
 """Karmi demo — the one command that shows the whole product working.
 
 Runs the full offline pipeline on the sample naksa drawing + the three sample
-site photos + the hand-measurement sidecar, writes every artifact to
+site photos + their hand-measurement sidecars, writes every artifact to
 ``runs/demo/``, and prints a presentable summary: severity counts, the headline
 finding in English and Nepali, the coverage/limits lines, and the path of every
 file it wrote. Also writes ``runs/demo/DEMO.md`` — a short walkthrough of what
@@ -38,7 +38,8 @@ PHOTO_NAMES = (
     "rear_foundation_stage.jpg",
     "side_columns_stage.jpg",
 )
-SIDECAR_NAME = "front_walls_stage.jpg.json"
+#: hand-measurement sidecars, one per measured photo (``<photo>.json``)
+SIDECAR_NAMES = tuple(f"{n}.json" for n in PHOTO_NAMES)
 KNOWN_DIMENSION_M = 10.0
 
 SEV_ORDER = ("high", "medium", "low", "info")
@@ -119,7 +120,7 @@ def headline_dict(delta) -> dict | None:
 
 def build_demo_md(summary: dict, headline: dict | None, limits: list[str],
                   artifacts: list[tuple[str, str, bool]], errors: list[str],
-                  warnings: list[str]) -> str:
+                  warnings: list[str], differences: list[dict] | None = None) -> str:
     lines: list[str] = []
     lines.append("# Karmi demo run — what this shows")
     lines.append("")
@@ -133,7 +134,8 @@ def build_demo_md(summary: dict, headline: dict | None, limits: list[str],
     lines.append("")
     lines.append("- Approved drawing: `fixtures/naksa_base.pdf` (synthetic sample naksa, vector PDF)")
     lines.append("- Site photos (3, synthetic): " + ", ".join(f"`fixtures/photos/{n}`" for n in PHOTO_NAMES))
-    lines.append(f"- Hand measurement sidecar: `fixtures/photos/{SIDECAR_NAME}` (tape-measured by hand)")
+    lines.append("- Hand measurement sidecars (tape-measured, synthetic): "
+                 + ", ".join(f"`fixtures/photos/{n}`" for n in SIDECAR_NAMES))
     lines.append(f"- Known dimension: {KNOWN_DIMENSION_M} m")
     lines.append("")
     lines.append("## Result at a glance")
@@ -173,6 +175,17 @@ def build_demo_md(summary: dict, headline: dict | None, limits: list[str],
             "that everything is correct — photos only show what they show."
         )
     lines.append("")
+    if differences:
+        lines.append("## Every difference flagged")
+        lines.append("")
+        lines.append("| Severity | Element | Drawing | Site evidence | Confidence |")
+        lines.append("|---|---|---|---|---|")
+        for d in differences:
+            lines.append(
+                f"| {d['severity']} | {d['element']} | {d['expected'] or '—'} | "
+                f"{d['observed'] or '—'} | {d['confidence']} |"
+            )
+        lines.append("")
     lines.append("## Coverage & limits (what this run could NOT determine)")
     lines.append("")
     if limits:
@@ -250,6 +263,8 @@ def main(argv=None) -> int:
         description="Run the full Karmi pipeline on the sample naksa + site photos (offline) "
                     "and print a presentable summary.",
     )
+    ap.add_argument("--drawing", default=str(REPO_ROOT / DRAWING_REL),
+                    help=f"path to architectural drawing PDF (default: {DRAWING_REL})")
     ap.add_argument("--out", default=str(REPO_ROOT / "runs" / "demo"),
                     help="output directory (default: runs/demo)")
     ap.add_argument("--open", action="store_true",
@@ -258,13 +273,13 @@ def main(argv=None) -> int:
                     help="print only a machine-readable JSON summary")
     args = ap.parse_args(argv)
 
-    drawing = REPO_ROOT / "fixtures" / "naksa_base.pdf"
+    drawing = Path(args.drawing).expanduser().resolve()
     photos = [REPO_ROOT / "fixtures" / "photos" / n for n in PHOTO_NAMES]
-    sidecar = REPO_ROOT / "fixtures" / "photos" / SIDECAR_NAME
-    missing_inputs = [p for p in [drawing, *photos, sidecar] if not p.is_file()]
+    sidecars = [REPO_ROOT / "fixtures" / "photos" / n for n in SIDECAR_NAMES]
+    missing_inputs = [p for p in [drawing, *photos, *sidecars] if not p.is_file()]
     if missing_inputs:
         for p in missing_inputs:
-            print(f"error: fixture not found: {p}", file=sys.stderr)
+            print(f"error: file not found: {p}", file=sys.stderr)
         print("Run this from a full checkout of the repository (fixtures/ must exist).", file=sys.stderr)
         return 2
 
@@ -277,7 +292,7 @@ def main(argv=None) -> int:
         [str(p) for p in photos],
         out_dir=str(out_dir),
         known_dimension=KNOWN_DIMENSION_M,
-        sidecars={str(photos[0]): str(sidecar)},
+        sidecars={str(p): str(s) for p, s in zip(photos, sidecars)},
     )
 
     report = res.report
@@ -285,6 +300,13 @@ def main(argv=None) -> int:
     deltas = list(report.deltas) if report is not None else []
     limits = list(report.limits) if report is not None else []
     headline = headline_dict(pick_headline(deltas))
+    differences = [
+        headline_dict(d)
+        for d in sorted(
+            (d for d in deltas if _status(d) in ("differs", "missing", "unexpected")),
+            key=lambda d: SEV_ORDER.index(_sev(d)) if _sev(d) in SEV_ORDER else 9,
+        )
+    ]
 
     # ---- artifact bookkeeping -------------------------------------------------
     # run_pipeline writes fixed filenames into out_dir; list them all and verify
@@ -306,6 +328,7 @@ def main(argv=None) -> int:
         + [("DEMO.md — this walkthrough", _display(demo_md_path), True)],
         res.errors,
         res.warnings,
+        differences,
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     demo_md_path.write_text(demo_md, encoding="utf-8")
@@ -320,11 +343,12 @@ def main(argv=None) -> int:
             "out_dir": _display(out_dir),
             "drawing": DRAWING_REL,
             "photos": [f"fixtures/photos/{n}" for n in PHOTO_NAMES],
-            "sidecar": f"fixtures/photos/{SIDECAR_NAME}",
+            "sidecars": [f"fixtures/photos/{n}" for n in SIDECAR_NAMES],
             "known_dimension_m": KNOWN_DIMENSION_M,
             "engine": {"ai": "none", "network": False, "deterministic": True},
             "summary": summary,
             "headline": headline,
+            "differences": differences,
             "limits": limits,
             "narration_en": list(report.narration_en) if report is not None else [],
             "narration_np": list(report.narration_np) if report is not None else [],
@@ -339,7 +363,7 @@ def main(argv=None) -> int:
         print("=" * 62)
         print(f"drawing   : {DRAWING_REL}")
         print(f"photos    : {len(PHOTO_NAMES)}  ({', '.join(PHOTO_NAMES)})")
-        print(f"sidecar   : fixtures/photos/{SIDECAR_NAME}  (hand measurements)")
+        print(f"sidecars  : {len(SIDECAR_NAMES)}  (hand measurements, one per photo)")
         print(f"known dim : {KNOWN_DIMENSION_M} m")
         print(f"out dir   : {_display(out_dir)}")
         print("engine    : no AI · no network · deterministic")
@@ -363,6 +387,13 @@ def main(argv=None) -> int:
             print(f"  NE : {headline['reason_np']}")
         else:
             print("  No difference above the info threshold was flagged in this run.")
+        if len(differences) > 1:
+            print()
+            print(f"All differences ({len(differences)})")
+            print("-" * 62)
+            for d in differences:
+                print(f"  [{d['severity']:<6}] {d['element']}: drawing {d['expected'] or '—'} "
+                      f"vs site {d['observed'] or '—'}  (conf {d['confidence']})")
         print()
         print("These are items to verify — Karmi never declares a violation.")
         print()

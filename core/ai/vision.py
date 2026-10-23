@@ -194,6 +194,47 @@ class PhotoElement(BaseModel):
     location_hint: str | None = None
     confidence: float = 0.0
     evidence: str | None = None
+    occlusion: Literal["none", "partial", "heavy"] = "none"
+    perspective: Literal["orthogonal", "oblique", "unknown"] = "unknown"
+
+    @property
+    def effective_confidence(self) -> float:
+        factor = 1.0
+        if self.occlusion == "partial":
+            factor *= 0.85
+        elif self.occlusion == "heavy":
+            factor *= 0.65
+        if self.perspective == "oblique":
+            factor *= 0.80
+        return round(self.confidence * factor, 2)
+
+    @field_validator("occlusion", mode="before")
+    @classmethod
+    def _v_occlusion(cls, v: Any) -> str:
+        if v is None:
+            return "none"
+        s = str(v).strip().lower()
+        if "heavy" in s or "blocked" in s or "obscured" in s:
+            return "heavy"
+        if "partial" in s or "scaffold" in s or "partly" in s or "cover" in s:
+            return "partial"
+        if s in ("none", "partial", "heavy"):
+            return s
+        return "none"
+
+    @field_validator("perspective", mode="before")
+    @classmethod
+    def _v_perspective(cls, v: Any) -> str:
+        if v is None:
+            return "unknown"
+        s = str(v).strip().lower()
+        if "oblique" in s or "angle" in s or "corner" in s or "slanted" in s or "perspective" in s:
+            return "oblique"
+        if "ortho" in s or "flat" in s or "straight" in s or "front" in s or "perpendicular" in s:
+            return "orthogonal"
+        if s in ("orthogonal", "oblique", "unknown"):
+            return s
+        return "unknown"
 
     @field_validator("kind", mode="before")
     @classmethod
@@ -369,6 +410,148 @@ def _extract_json_object(text: Any) -> Any:
 
 
 # --------------------------------------------------------------------------- #
+# multi-photo consensus & clustering
+# --------------------------------------------------------------------------- #
+def multi_photo_consensus(
+    captures: Sequence[dict[str, Any]],
+    elements: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Calculate multi-photo consensus across captures and observed elements.
+
+    1. Stage consensus: weighted voting across captures by stage_confidence.
+       Detects stage discrepancies (e.g. foundation vs roof) and returns warnings.
+    2. Element clustering: groups elements observed across multiple photos by
+       (kind, location_hint/normalized key), averages approximate dimensions,
+       records all corroborating source photos, and boosts confidence (clamped to <= 0.70).
+    """
+    warnings: list[str] = []
+
+    # 1. Stage Consensus
+    stage_scores: dict[str, float] = {}
+    distinct_stages: set[str] = set()
+    for c in captures:
+        st = str(c.get("stage", "unknown")).lower()
+        conf = float(c.get("stage_confidence", 0.5) or 0.5)
+        if st and st != "unknown":
+            stage_scores[st] = stage_scores.get(st, 0.0) + conf
+            distinct_stages.add(st)
+
+    consensus_stage = "unknown"
+    if stage_scores:
+        consensus_stage = max(stage_scores.items(), key=lambda kv: kv[1])[0]
+    elif captures:
+        consensus_stage = captures[0].get("stage", "unknown")
+
+    # Detect discrepancy across photos
+    stage_order = {
+        "site": 0,
+        "foundation": 1,
+        "columns": 2,
+        "walls": 3,
+        "slab": 4,
+        "roof": 5,
+        "finishing": 6,
+        "complete": 7,
+    }
+    stage_discrepancy = False
+    valid_stages = [s for s in distinct_stages if s in stage_order]
+    if len(valid_stages) >= 2:
+        indices = [stage_order[s] for s in valid_stages]
+        if max(indices) - min(indices) >= 2:
+            stage_discrepancy = True
+            stages_fmt = ", ".join(sorted(valid_stages))
+            warnings.append(
+                f"Discrepancy detected across photos for construction stage ({stages_fmt}). "
+                "Different photos may show different parts or wings of the site."
+            )
+
+    # 2. Element Deduplication & Clustering
+    def _norm_loc(hint: str | None) -> str:
+        if not hint:
+            return ""
+        words = re.findall(r"\w+", hint.lower())
+        return " ".join(sorted(words))
+
+    clusters: list[dict[str, Any]] = []
+    for el in elements:
+        kind = str(el.get("kind", "other")).lower()
+        loc = el.get("location_hint") or ""
+        norm_loc = _norm_loc(loc)
+        source_file = el.get("file", "")
+
+        matched_cluster = None
+        for c in clusters:
+            if c["kind"] == kind:
+                c_norm = _norm_loc(c["location_hint"])
+                if norm_loc and c_norm and (norm_loc == c_norm or norm_loc in c_norm or c_norm in norm_loc):
+                    matched_cluster = c
+                    break
+                elif not norm_loc and not c_norm and kind in ("slab", "roof"):
+                    matched_cluster = c
+                    break
+
+        if matched_cluster is not None:
+            matched_cluster["members"].append(el)
+            if source_file and source_file not in matched_cluster["source_files"]:
+                matched_cluster["source_files"].append(source_file)
+        else:
+            clusters.append(
+                {
+                    "kind": kind,
+                    "location_hint": loc,
+                    "source_files": [source_file] if source_file else [],
+                    "members": [el],
+                }
+            )
+
+    consensus_elements: list[dict[str, Any]] = []
+    for c in clusters:
+        members = c["members"]
+        source_files = c["source_files"]
+
+        # Aggregate approx_size
+        size_keys: set[str] = set()
+        for m in members:
+            size_keys.update(m.get("approx_size", {}).keys())
+
+        merged_size: dict[str, float] = {}
+        for k in size_keys:
+            vals = [
+                m["approx_size"][k]
+                for m in members
+                if k in m.get("approx_size", {}) and m["approx_size"][k] is not None
+            ]
+            if vals:
+                merged_size[k] = round(sum(vals) / len(vals), 2)
+
+        base_conf = max(float(m.get("confidence", 0.0) or 0.0) for m in members)
+        corroboration_bonus = 0.05 if len(source_files) > 1 else 0.0
+        final_conf = min(0.70, round(base_conf + corroboration_bonus, 2))
+
+        evidences = [m.get("evidence") for m in members if m.get("evidence")]
+        evidence_str = "; ".join(evidences) if evidences else None
+
+        consensus_elements.append(
+            {
+                "kind": c["kind"],
+                "location_hint": c["location_hint"],
+                "approx_size": merged_size,
+                "confidence": final_conf,
+                "evidence": evidence_str,
+                "source_files": source_files,
+                "corroboration_count": len(source_files),
+            }
+        )
+
+    return {
+        "stage": consensus_stage,
+        "stage_discrepancy": stage_discrepancy,
+        "elements": consensus_elements,
+        "warnings": warnings,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # public entry point
 # --------------------------------------------------------------------------- #
 def observe_photos(
@@ -464,14 +647,26 @@ def observe_photos(
         detail = "; ".join(warnings) if warnings else "no usable result"
         raise AIExtractionError(f"AI vision failed for every photo: {detail}")
 
+    consensus = multi_photo_consensus(captures, elements)
+    if consensus.get("warnings"):
+        warnings.extend(consensus["warnings"])
+
     return {
         "provider": getattr(provider, "name", "?"),
         "model": getattr(provider, "model", "?"),
         "captures": captures,
         "elements": elements,
         "scale_refs": scale_refs,
+        "consensus": consensus,
         "warnings": warnings,
     }
 
 
-__all__ = ["AIExtractionError", "observe_photos", "PhotoObservation", "PhotoElement", "PhotoScaleRef"]
+__all__ = [
+    "AIExtractionError",
+    "observe_photos",
+    "multi_photo_consensus",
+    "PhotoObservation",
+    "PhotoElement",
+    "PhotoScaleRef",
+]

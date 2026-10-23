@@ -204,6 +204,109 @@ def load_gray(path: str | Path, *, dpi: int = DEFAULT_RENDER_DPI, page: int = 0)
 
 
 # --------------------------------------------------------------------------- #
+# 1b. blueprint polarity & tolerance calibration
+# --------------------------------------------------------------------------- #
+def detect_blueprint_polarity(gray: np.ndarray) -> tuple[bool, str]:
+    """Detect whether an image has inverted polarity (dark background with bright lines).
+
+    Ammonia blueprints ('नीलो ब्लूप्रिन्ट') and photo negatives commonly feature
+    dark blue, purple, or dark grey backgrounds with light line drawings.
+    Returns (is_inverted, reason).
+    """
+    g = np.asarray(gray, dtype=np.float64)
+    if g.size == 0:
+        return False, "Empty image"
+    lo, hi = float(np.nanmin(g)), float(np.nanmax(g))
+    if hi - lo < 1e-4:
+        return False, "Uniform image (blank)"
+
+    med = float(np.median(g))
+    dark_frac = float((g < (lo + 0.45 * (hi - lo))).mean())
+    bright_frac = float((g > (lo + 0.70 * (hi - lo))).mean())
+
+    if (med < 0.40 or dark_frac > 0.60) and bright_frac < 0.35 and bright_frac > 0.001:
+        return True, "Ammonia blueprint / inverted tone detected (dark background with bright lines)"
+    return False, "Standard drawing with white background and dark ink"
+
+
+def calibrate_tolerances(
+    dpi: int = DEFAULT_RENDER_DPI,
+    base_scale_m_per_unit: float | None = None,
+) -> dict[str, float]:
+    """Calibrate run-length segment extraction tolerances according to rendering DPI.
+
+    Ensures that physical feature thresholds (e.g., minimum detectable wall ~0.20m,
+    collinear gap bridge ~2.5cm) scale proportionally with image resolution.
+    """
+    factor = float(dpi) / float(DEFAULT_RENDER_DPI)
+    min_len = max(10.0, round(MIN_LEN_PX * factor, 1))
+    max_gap = max(1.5, round(MAX_GAP_PX * factor, 1))
+    return {
+        "min_len_px": min_len,
+        "max_gap_px": max_gap,
+        "angle_tol_deg": ANGLE_TOL_DEG,
+    }
+
+
+def blueprint_quality_score(stats: dict[str, Any]) -> dict[str, Any]:
+    """Grade image quality for floor plan extraction and generate Nepali diagnostics.
+
+    Evaluates contrast, background uniformity, speckle noise, and class separation.
+    Returns structured score, letter grade ('A', 'B', 'C', 'D'), and homeowner advice.
+    """
+    if stats.get("blank", False):
+        return {
+            "overall_score": 0,
+            "grade": "D",
+            "blueprint_type": "blank",
+            "is_acceptable_for_diff": False,
+            "diagnostic_np": "नक्सा खाली वा पूर्ण रूपमा अस्पष्ट छ — कृपया सही फाइल अपलोड गर्नुहोस्।",
+        }
+
+    contrast = float(stats.get("contrast", 0.0))
+    bg_std = float(stats.get("bg_std", 0.10))
+    speckle = float(stats.get("speckle", 0.0))
+    degraded = bool(stats.get("degraded", False))
+
+    contrast_pts = min(40.0, max(0.0, (contrast / 0.70) * 40.0))
+    bg_pts = min(30.0, max(0.0, 30.0 - (bg_std / 0.15) * 30.0))
+    speckle_pts = min(30.0, max(0.0, 30.0 - (speckle / 0.20) * 30.0))
+
+    score = contrast_pts + bg_pts + speckle_pts
+    if degraded:
+        score = max(10.0, score - 25.0)
+
+    score_val = int(round(score))
+
+    if score_val >= 80:
+        grade = "A"
+        diag_np = "नक्साको गुणस्तर राम्रो र स्पष्ट छ — तुलनाको लागि उपयुक्त।"
+        bp_type = "clean_scan"
+    elif score_val >= 65:
+        grade = "B"
+        diag_np = "नक्सा सामान्य छ, केही मसिना रेखाहरू छुट्न सक्छन्।"
+        bp_type = "standard_scan"
+    elif score_val >= 50:
+        grade = "C"
+        diag_np = "नक्सामा छायाँ वा दाग देखिन्छ — ध्यानपूर्वक जाँच्नुहोस्।"
+        bp_type = "phone_photo"
+    else:
+        grade = "D"
+        diag_np = "नक्सा कमजोर वा अस्पष्ट छ — पुनः स्क्यान गर्न सिफारिस गरिन्छ।"
+        bp_type = "noisy_degraded"
+
+    is_acceptable = grade in ("A", "B") and not degraded
+
+    return {
+        "overall_score": score_val,
+        "grade": grade,
+        "blueprint_type": bp_type,
+        "is_acceptable_for_diff": is_acceptable,
+        "diagnostic_np": diag_np,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # 2. binarize
 # --------------------------------------------------------------------------- #
 def binarize(gray: np.ndarray, method: str = "otsu") -> np.ndarray:
@@ -903,6 +1006,7 @@ def extract_plan(
     angle_tol_deg: float = ANGLE_TOL_DEG,
     max_deskew_deg: float = MAX_DESKEW_DEG,
     binarize_method: str = "otsu",
+    auto_invert: bool = True,
     metres_per_px: float | None = None,
     bar_px: float | None = None,
     bar_metres: float | None = None,
@@ -918,6 +1022,18 @@ def extract_plan(
     """
     warnings: list[str] = []
     gray = load_gray(path, dpi=dpi, page=page)
+
+    polarity_inverted = False
+    if auto_invert:
+        is_inv, pol_reason = detect_blueprint_polarity(gray)
+        if is_inv:
+            gray = 1.0 - gray
+            polarity_inverted = True
+            warnings.append(
+                f"Detected ammonia blueprint or inverted drawing ({pol_reason}) — "
+                "automatically calibrated and inverted tone for line extraction."
+            )
+
     binary = binarize(gray, method=binarize_method)
     threshold: float | None = None
     degraded = False
@@ -1063,6 +1179,8 @@ def extract_plan(
             "image_size_px": [int(gray.shape[1]), int(gray.shape[0])],
             "px_to_pt": 72.0 / float(dpi),
             "binarize_method": binarize_method,
+            "polarity_inverted": bool(polarity_inverted),
+            "blueprint_quality": blueprint_quality_score(stats),
             "ink_fraction": round(ink_frac, 5),
             "deskew_deg": float(angle),
             "quality_factor": round(quality, 3),

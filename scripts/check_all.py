@@ -51,7 +51,7 @@ PHOTO_NAMES = (
     "rear_foundation_stage.jpg",
     "side_columns_stage.jpg",
 )
-SIDECAR_NAME = "front_walls_stage.jpg.json"
+SIDECAR_NAMES = tuple(f"{n}.json" for n in PHOTO_NAMES)
 IMPORT_PACKAGES = ("core", "render", "web")
 
 # dirs excluded from the privacy scan — every one of these is gitignored
@@ -61,7 +61,7 @@ PRIVACY_SKIP_DIRS = {
     ".pytest_cache", ".ruff_cache", ".mypy_cache", "runs", "models",
 }
 # file patterns that are gitignored as well (run manifests may hold user paths)
-PRIVACY_SKIP_GLOBS = ("*.scene.json", "run.json", "uploads.json", ".env", "*.key", "credentials.json")
+PRIVACY_SKIP_GLOBS = ("*.scene.json", "run.json", "uploads.json", ".env", "*.key", "credentials.json", ".coverage*", ".coverage")
 
 
 @dataclass
@@ -75,11 +75,14 @@ class Check:
 # --------------------------------------------------------------------------- #
 # 1. pytest
 # --------------------------------------------------------------------------- #
-def check_pytest() -> Check:
-    name = "pytest"
+def check_pytest(with_cov: bool = False) -> Check:
+    name = "pytest" if not with_cov else "pytest (+ cov)"
     try:
+        cmd = [sys.executable, "-m", "pytest", "-q"]
+        if with_cov:
+            cmd.extend(["--cov", "--cov-report=term"])
         proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q"],
+            cmd,
             cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
@@ -112,7 +115,7 @@ def check_pipeline(variant: str, tmp: Path) -> Check:
 
     drawing = REPO_ROOT / "fixtures" / f"naksa_{variant}.pdf"
     photos = [str(REPO_ROOT / "fixtures" / "photos" / n) for n in PHOTO_NAMES]
-    sidecars = {photos[0]: str(REPO_ROOT / "fixtures" / "photos" / SIDECAR_NAME)}
+    sidecars = {p: str(REPO_ROOT / "fixtures" / "photos" / s) for p, s in zip(photos, SIDECAR_NAMES)}
     if not drawing.is_file():
         return Check(name, False, f"fixture missing: {drawing}")
 
@@ -269,6 +272,11 @@ def main(argv=None) -> int:
     except Exception:
         pass
 
+    import argparse
+    parser = argparse.ArgumentParser(description="Karmi quality gate")
+    parser.add_argument("--coverage", action="store_true", help="run pytest with coverage measurement")
+    args = parser.parse_args(argv)
+
     t0 = time.perf_counter()
     print("Karmi quality gate")
     print("=" * 66)
@@ -277,7 +285,7 @@ def main(argv=None) -> int:
     checks: list[Check] = []
     with tempfile.TemporaryDirectory(prefix="karmi-checkall-") as tmp:
         tmp_dir = Path(tmp)
-        checks.append(check_pytest())
+        checks.append(check_pytest(with_cov=args.coverage))
         for variant in PIPELINE_FIXTURES:
             checks.append(check_pipeline(variant, tmp_dir))
         checks.append(check_imports())

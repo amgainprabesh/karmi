@@ -52,6 +52,8 @@ import re
 from typing import Any
 
 from core import nepali
+from core.municipal import evaluate_municipal_compliance
+from core.regulatory import evaluate_scene_regulatory
 from core.schema import (
     Delta,
     DeltaStatus,
@@ -914,6 +916,8 @@ def diff_scene(
     observed: ObservedState,
     *,
     ai: Any = None,
+    region: str = "hills",
+    municipal_profile: str | None = None,
 ) -> DiffReport:
     """Compare the approved drawing with the as-built evidence.
 
@@ -1131,6 +1135,46 @@ def diff_scene(
             continue
         vseq += 1
         verify_list.append(_make_verify(f"v{vseq:03d}", delta, ctx))
+
+    # ---- regulatory evaluation (NBC 206) ---------------------------------- #
+    reg_items, reg_meta = evaluate_scene_regulatory(
+        scene, observed, deltas, region=region
+    )
+    reg_by_ref: dict[str, list[VerifyItem]] = {}
+    for rit in reg_items:
+        ref = rit.delta_ref
+        if not ref and rit.id.startswith("v_reg_"):
+            parts = rit.id.split("_")
+            if len(parts) >= 3:
+                ref = parts[2]
+        if ref:
+            reg_by_ref.setdefault(ref, []).append(rit)
+
+    for vitem in verify_list:
+        matching_reg: list[VerifyItem] = []
+        if vitem.delta_ref:
+            matching_reg.extend(reg_by_ref.get(vitem.delta_ref, []))
+            d_obj = next((d for d in deltas if d.id == vitem.delta_ref), None)
+            if d_obj and d_obj.scene_ref:
+                matching_reg.extend(reg_by_ref.get(d_obj.scene_ref, []))
+        for r_item in matching_reg:
+            if r_item.why and "NBC 206" not in (vitem.why or ""):
+                vitem.why = f"{vitem.why}; {r_item.why}"
+            if r_item.how and r_item.how not in (vitem.how or ""):
+                vitem.how = f"{vitem.how} {r_item.how}"
+
+    # ---- municipal bylaws evaluation ------------------------------------- #
+    plot_meta = (getattr(scene, "meta", None) or {}).get("plot") or (getattr(observed, "meta", None) or {}).get("plot")
+    muni_items, muni_meta = evaluate_municipal_compliance(
+        scene, plot_meta=plot_meta, profile_name=municipal_profile
+    )
+    if muni_items:
+        existing_vids = {v.id for v in verify_list}
+        for mit in muni_items:
+            if mit.id not in existing_vids:
+                verify_list.append(mit)
+                existing_vids.add(mit.id)
+
     report.verify_list = verify_list
 
     # ---- limits ---------------------------------------------------------- #
@@ -1156,6 +1200,8 @@ def diff_scene(
         "missing": sum(1 for d in deltas if d.status == DeltaStatus.MISSING),
         "unexpected": sum(1 for d in deltas if d.status == DeltaStatus.UNEXPECTED),
         "unverifiable": sum(1 for d in deltas if d.status == DeltaStatus.UNVERIFIABLE),
+        "regulatory": reg_meta,
+        "municipal": muni_meta,
     }
     if warnings:
         report.meta["warnings"] = warnings

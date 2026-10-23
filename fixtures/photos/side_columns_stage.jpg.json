@@ -1,0 +1,35 @@
+{
+  "photo": "side_columns_stage.jpg",
+  "synthetic": true,
+  "taken_at": "2026-04-20T09:15:00+05:45",
+  "view": "side",
+  "stage": "columns",
+  "notes": "DEMO MEASUREMENT SET — synthetic, not a real site. East side, RCC columns up and the side door frame (chaukos) already set between them, as is common practice before brickwork. Measured with a 5 m steel tape.",
+  "scale_refs": [
+    {
+      "kind": "known_object",
+      "value": 0.23,
+      "unit": "m",
+      "confidence": 0.85,
+      "evidence": "column face width (9 in), tape-measured"
+    }
+  ],
+  "elements": [
+    {
+      "kind": "wall",
+      "matches_scene_id": "W4",
+      "approx_size": { "length": 7.45 },
+      "location_hint": "east side, outer face of corner columns",
+      "confidence": 0.85,
+      "evidence": "tape measure between the outer faces of the two east corner columns: 7.45 m"
+    },
+    {
+      "kind": "opening",
+      "matches_scene_id": "O4",
+      "approx_size": { "width": 0.75, "height": 2.05 },
+      "location_hint": "east side door frame, between the middle columns",
+      "confidence": 0.8,
+      "evidence": "door frame clear width measured 0.75 m (2 ft 6 in) — narrower than the drawing"
+    }
+  ]
+}

@@ -56,6 +56,24 @@ Fixtures: `naksa_base`, `naksa_drift`, `naksa_sparse` (paths to
 | `test_validate.py` | `core.validate` | accept real PDF, reject fake/oversized, `safe_filename`/`safe_join` |
 | `test_pipeline.py` | `core.pipeline` (always present) | run.json end-to-end, manifest re-run, no-network default path |
 | `test_render_adapter.py` | `render.adapter` | view payload shape, empty-input warnings |
+| `test_nepali.py` | `core.nepali` | digit round-trips, unit formatting, enum translations, weak evidence safeguards |
+| `test_narration_guard.py` | `core.diff` | AI narration validation: numbers check, line count and language safety |
+| `test_ingest.py` | `core.ingest` | input classification for vector PDF, raster scan, photos, and invalid formats |
+| `test_raster.py` | `core.raster` | deterministic line/segment extraction, deskew recovery, scan-only pipeline |
+| `test_web_app.py` | `web.app` | FastAPI endpoints, healthz, upload flows with sidecars, 400/404 handling |
+| `test_demo_regression.py` | multiple | pins 8-finding demo scenario, control run zero-diff, and DoD invariants D1-D7 |
+| `test_render_selfcheck.py` | `render._selfcheck` | adapter self-check and viewer.html DOM integrity markers |
+| `dataset/tests/` | `dataset` | dataset schema, consent records, de-identification, and export manifests |
 
-`pytest.ini` sets `testpaths = tests`, `pythonpath = .` and
+## Fast run & coverage
+
+Run fast tests (excluding slow raster/full upload runs):
+
+    .venv/Scripts/python.exe -m pytest -q -m "not slow"
+
+Run with test coverage report:
+
+    .venv/Scripts/python.exe -m pytest --cov --cov-report=term-missing -q
+
+`pytest.ini` sets `testpaths = tests dataset/tests`, `pythonpath = .` and
 `-p no:cacheprovider` (so runs never leave a `.pytest_cache/` in the repo).

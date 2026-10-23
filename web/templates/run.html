@@ -12,7 +12,9 @@
     <div class="run-actions">
       {% if has_report_html %}<a class="btn btn-ghost" href="/runs/{{ run_id }}/report.html" target="_blank" rel="noopener">Full report (HTML)</a>{% endif %}
       {% if has_report_md %}<a class="btn btn-ghost" href="/runs/{{ run_id }}/report.md" target="_blank" rel="noopener">Report (MD)</a>{% endif %}
-      <a class="btn btn-ghost" href="/api/report/{{ run_id }}">Report (JSON)</a>
+      <a class="btn btn-ghost" href="/run/{{ run_id }}/export/print" target="_blank" rel="noopener">🖨️ Printable Report</a>
+      <a class="btn btn-ghost" href="/run/{{ run_id }}/export/report" download="karmi-report-{{ run_id }}.html">Download Report</a>
+      <a class="btn btn-ghost" href="/run/{{ run_id }}/export/json" download="karmi-report-{{ run_id }}.json">Download JSON</a>
     </div>
   </div>
   <div class="statement-banner" role="note">
@@ -106,7 +108,7 @@
       <tbody>
         {% for d in deltas %}
         <tr data-sev="{{ d.sev }}">
-          <td data-label="Element"><strong>{{ d.element }}</strong>{% if d.id %}<span class="cell-sub"><code>{{ d.id }}</code></span>{% endif %}</td>
+          <td data-label="Element"><strong>{{ d.element }}</strong>{% if d.id %}<span class="cell-sub"><code>{{ d.id }}</code>{% if viewer_state == "ready" %} · <a href="/viewer/{{ run_id }}/?focus={{ d.id }}" target="_blank" rel="noopener">3D &nearr;</a>{% endif %}</span>{% endif %}</td>
           <td data-label="Status"><span class="pill status-{{ d.status }}">{{ d.status_label }}</span></td>
           <td data-label="Approved (expected)">{{ d.expected if d.expected is not none else "—" }}</td>
           <td data-label="On site (observed)">{{ d.observed if d.observed is not none else "—" }}</td>
